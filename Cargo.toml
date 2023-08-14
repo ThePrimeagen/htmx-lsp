@@ -1,30 +1,21 @@
 [package]
-name = "jsperf-lsp"
+name = "htmx-lsp"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-lsp = { path = "lsp" }
 anyhow.workspace = true
 clap.workspace = true
 log.workspace = true
 structured-logger.workspace = true
-walkdir = "2.3.3"
+walkdir.workspace = true
+lsp = { path = "./lsp" }
 util = { path = "./util" }
 
 [workspace.dependencies]
-swc_core = { version = "0.79.28", features = [
-    "ecma_ast",
-    "ecma_plugin_transform",
-    "ecma_utils",
-    "ecma_visit",
-    "common",
-    "__parser",
-] }
-swc_common = { version = "0.31.18", features = ["tty-emitter"] }
-perf-checker = { path = "perf-checker" }
+walkdir = "2.3.3"
 anyhow = "1.0.72"
 clap = { version = "4.3.17", features = ["derive", "env"] }
 log = { version = "0.4.19", features = ["kv_unstable", "kv_unstable_serde"] }
