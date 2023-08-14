@@ -1,0 +1,11 @@
+[package]
+name = "util"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log.workspace = true
+structured-logger.workspace = true
+lsp-types = "0.94.0"
