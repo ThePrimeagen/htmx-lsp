@@ -1,5 +1,7 @@
-use log::{debug, warn};
-use lsp_server::Notification;
+use log::{debug, warn, error};
+use lsp_server::{Notification, Message, Request, RequestId};
+
+use crate::text_store::TEXT_STORE;
 
 #[derive(serde::Deserialize, Debug)]
 struct Text {
@@ -26,6 +28,44 @@ struct TextDocumentChanges {
     content_changes: Vec<Text>,
 }
 
+#[derive(serde::Deserialize, Debug)]
+struct CompletionContext {
+
+    #[serde(rename = "triggerCharacter")]
+    trigger_character: String,
+
+    #[serde(rename = "triggerKind")]
+    trigger_kind: u8,
+}
+
+#[derive(serde::Deserialize, Debug)]
+struct CompletionPosition {
+    line: usize,
+    character: usize,
+}
+
+#[derive(serde::Deserialize, Debug)]
+struct CompletionRequest {
+    context: CompletionContext,
+
+    #[serde(rename = "textDocument")]
+    text_document: TextDocumentLocation,
+
+    position: CompletionPosition,
+}
+
+#[derive(Debug)]
+pub struct HtmxCompletion {
+    pub items: Vec<String>,
+    pub id: RequestId,
+}
+
+#[derive(Debug)]
+pub enum HtmxResult {
+    Diagnostic,
+    Completion(HtmxCompletion),
+}
+
 /*
 fn perf_msg_to_diagnostic(perf: &PerfMessage, source: &str) -> Diagnostic {
     return match perf {
@@ -48,25 +88,58 @@ fn perf_msg_to_diagnostic(perf: &PerfMessage, source: &str) -> Diagnostic {
 
 // ignore snakeCase
 #[allow(non_snake_case)]
-fn handle_didChange(notification: Notification) -> Option<()> {
-    debug!("handling didChange {:?}", notification);
-    return None;
+fn handle_didChange(noti: Notification) -> Option<HtmxResult> {
+    let text_document_changes: TextDocumentChanges = serde_json::from_value(noti.params).ok()?;
+    let uri = text_document_changes.text_document.uri;
+    let text = text_document_changes.content_changes[0].text.to_string();
+
+    if text_document_changes.content_changes.len() > 1 {
+        error!("more than one content change, please be wary");
+    }
+
+    TEXT_STORE
+        .get()
+        .expect("text store not initialized")
+        .lock()
+        .expect("text store mutex poisoned")
+        .texts.insert(uri, text);
+
+    return None
 }
 
-pub fn handle_notification(not: Notification) -> Option<()> {
-    debug!("got notification: {:?}", not);
+#[allow(non_snake_case)]
+fn handle_completion(req: Request) -> Option<HtmxResult> {
+    let completion: CompletionRequest = serde_json::from_value(req.params).ok()?;
+    let id = req.id;
 
-    match not.method.as_str() {
-        "textDocument/didChange" => {
-            return handle_didChange(not);
+    error!("completion request: {} {:?}", id, completion);
+    return Some(HtmxResult::Completion(HtmxCompletion {
+        items: vec!["hx-post".to_string(), "hx-get".to_string()],
+        id,
+    }));
+}
+
+pub fn handle_request(req: Request) -> Option<HtmxResult> {
+    match req.method.as_str() {
+        "textDocument/completion" => handle_completion(req),
+        _ => {
+            warn!("unhandled request: {:?}", req);
+            None
         }
-        "textDocument/didSave" => {
-            warn!("textDocument/didSave was called");
-        }
+    }
+}
+
+pub fn handle_notification(noti: Notification) -> Option<HtmxResult> {
+    return match noti.method.as_str() {
+        "textDocument/didChange" => handle_didChange(noti),
         s => {
             debug!("unhandled notification: {:?}", s);
+            None
         }
     };
+}
 
-    return None;
+pub fn handle_other(msg: Message) -> Option<HtmxResult> {
+    warn!("unhandled message {:?}", msg);
+    return None
 }

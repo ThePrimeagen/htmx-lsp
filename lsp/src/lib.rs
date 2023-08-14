@@ -1,14 +1,19 @@
 mod handle;
+mod text_store;
 
 use anyhow::Result;
-use log::{info, warn};
+use log::{error, info, warn};
 use lsp_types::{
-    InitializeParams, ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind,
+    CompletionItem, CompletionItemKind, CompletionList, InitializeParams, ServerCapabilities,
+    TextDocumentSyncCapability, TextDocumentSyncKind, WorkDoneProgressOptions,
 };
 
-use lsp_server::{Connection, Message};
+use lsp_server::{Connection, Message, Response};
 
-use crate::handle::handle_notification;
+use crate::{
+    handle::{handle_notification, handle_other, handle_request, HtmxResult},
+    text_store::init_text_store,
+};
 
 // TODO: I cannot find this in the rust-analyzer project (owner of lsp_types / server)
 // I must be duplicating work
@@ -25,26 +30,77 @@ fn send_diagnostics(connection: &Connection, perfs: PerfDiagnostic) -> Result<()
 }
         */
 
+fn to_completion_list(items: Vec<String>) -> CompletionList {
+    return CompletionList {
+        is_incomplete: false,
+        items: items
+            .iter()
+            .map(|x| {
+                return CompletionItem {
+                    label: x.to_string(),
+                    label_details: None,
+                    kind: Some(CompletionItemKind::TEXT),
+                    detail: Some("deez nuts".to_string()),
+                    documentation: None,
+                    deprecated: Some(false),
+                    preselect: None,
+                    sort_text: None,
+                    filter_text: None,
+                    insert_text: None,
+                    insert_text_format: None,
+                    insert_text_mode: None,
+                    text_edit: None,
+                    additional_text_edits: None,
+                    command: None,
+                    commit_characters: None,
+                    data: None,
+                    tags: None,
+                };
+            })
+            .collect(),
+    };
+}
+
 fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
     let _params: InitializeParams = serde_json::from_value(params).unwrap();
-    info!("starting example main loop");
+
+    info!("STARTING EXAMPLE MAIN LOOP");
+
     for msg in &connection.receiver {
-        match msg {
-            Message::Notification(not) => {
-                match handle_notification(not) {
-                    Some(perfs) => {
-                        //send_diagnostics(&connection, perfs)?;
-                    }
-                    None => {}
-                }
+        let result = match msg {
+            Message::Notification(not) => handle_notification(not),
+            Message::Request(req) => handle_request(req),
+            _ => handle_other(msg),
+        };
+
+        match match result {
+            Some(HtmxResult::Completion(c)) => {
+                let str = match serde_json::to_value(&to_completion_list(c.items)) {
+                    Ok(s) => s,
+                    Err(_) => continue,
+                };
+
+                // TODO: block requests that have been cancelled
+                connection.sender.send(Message::Response(Response {
+                    id: c.id,
+                    result: Some(str),
+                    error: None,
+                }))
             }
-            _ => {}
-        }
+            Some(HtmxResult::Diagnostic) => todo!(),
+            None => continue,
+        } {
+            Ok(_) => error!("sent response"),
+            Err(e) => error!("failed to send response: {:?}", e),
+        };
     }
-    Ok(())
+
+    return Ok(());
 }
 
 pub fn start_lsp() -> Result<()> {
+    init_text_store();
+
     // Note that  we must have our logging only write out to stderr.
     info!("starting generic LSP server");
 
@@ -55,6 +111,15 @@ pub fn start_lsp() -> Result<()> {
     // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
     let server_capabilities = serde_json::to_value(&ServerCapabilities {
         text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
+        completion_provider: Some(lsp_types::CompletionOptions {
+            resolve_provider: Some(false),
+            trigger_characters: Some(vec!["-".to_string()]),
+            work_done_progress_options: WorkDoneProgressOptions {
+                work_done_progress: None,
+            },
+            all_commit_characters: None,
+            completion_item: None,
+        }),
         ..Default::default()
     })
     .unwrap();
