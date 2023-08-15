@@ -12,4 +12,5 @@ lsp-server.workspace = true
 lsp-types.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+walkdir.workspace = true
 util = { path = "../util" }

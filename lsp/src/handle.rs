@@ -3,7 +3,7 @@ use std::sync::OnceLock;
 use log::{debug, warn, error};
 use lsp_server::{Notification, Message, Request, RequestId};
 
-use crate::text_store::TEXT_STORE;
+use crate::{text_store::TEXT_STORE, htmx::{HX_TAGS, HxAttribute}};
 
 #[derive(serde::Deserialize, Debug)]
 struct Text {
@@ -57,36 +57,16 @@ struct CompletionRequest {
 }
 
 #[derive(Debug)]
-pub struct HtmxCompletion {
-    pub items: Vec<String>,
+pub struct HtmxAttributeCompletion {
+    pub items: Vec<HxAttribute>,
     pub id: RequestId,
 }
 
 #[derive(Debug)]
 pub enum HtmxResult {
     Diagnostic,
-    Completion(HtmxCompletion),
+    AttributeCompletion(HtmxAttributeCompletion),
 }
-
-/*
-fn perf_msg_to_diagnostic(perf: &PerfMessage, source: &str) -> Diagnostic {
-    return match perf {
-        PerfMessage::Diagnostic(d) => {
-            Diagnostic::new(
-                Range {
-                    start: byte_pos_to_line_col(&source, d.position.0),
-                    end: byte_pos_to_line_col(&source, d.position.1),
-                },
-                Some(DiagnosticSeverity::HINT),
-                None,
-                None,
-                d.msg.clone(),
-                None,
-                None)
-        }
-    }
-}
-*/
 
 // ignore snakeCase
 #[allow(non_snake_case)]
@@ -109,30 +89,13 @@ fn handle_didChange(noti: Notification) -> Option<HtmxResult> {
     return None
 }
 
-pub static HX_TAGS: OnceLock<Vec<String>> = OnceLock::new();
-pub fn init_hx_tags() {
-    _ = HX_TAGS.set(vec![
-        "hx-get".to_string(),
-        "hx-post".to_string(),
-        "hx-delete".to_string(),
-        "hx-put".to_string(),
-        "hx-patch".to_string(),
-        "hx-vals".to_string(),
-        "hx-include".to_string(),
-        "hx-swap".to_string(),
-        "hx-target".to_string(),
-        "hx-boost".to_string(),
-    ]);
-}
-
-
 #[allow(non_snake_case)]
 fn handle_completion(req: Request) -> Option<HtmxResult> {
     let completion: CompletionRequest = serde_json::from_value(req.params).ok()?;
     let id = req.id;
 
-    error!("completion request: {} {:?}", id, completion);
-    return Some(HtmxResult::Completion(HtmxCompletion {
+    // TODO: clean up clone here if perf is any issue
+    return Some(HtmxResult::AttributeCompletion(HtmxAttributeCompletion {
         items: HX_TAGS.get().expect("constant data should always be present").clone(),
         id,
     }));

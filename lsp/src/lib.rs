@@ -1,7 +1,9 @@
 mod handle;
 mod text_store;
+mod htmx;
 
 use anyhow::Result;
+use htmx::HxAttribute;
 use log::{error, info, warn};
 use lsp_types::{
     CompletionItem, CompletionItemKind, CompletionList, InitializeParams, ServerCapabilities,
@@ -11,36 +13,22 @@ use lsp_types::{
 use lsp_server::{Connection, Message, Response};
 
 use crate::{
-    handle::{handle_notification, handle_other, handle_request, HtmxResult, init_hx_tags},
+    handle::{handle_notification, handle_other, handle_request, HtmxResult},
     text_store::init_text_store,
+    htmx::init_hx_tags,
 };
 
-// TODO: I cannot find this in the rust-analyzer project (owner of lsp_types / server)
-// I must be duplicating work
-/*
-fn send_diagnostics(connection: &Connection, perfs: PerfDiagnostic) -> Result<()> {
-    let params = PublishDiagnosticsParams {
-        uri: Url::parse(&perfs.uri)?,
-        diagnostics: perfs.diagnostics,
-        version: None,
-    };
-    let not = Notification::new("textDocument/publishDiagnostics".to_string(), params);
-    connection.sender.send(Message::Notification(not))?;
-    Ok(())
-}
-        */
-
-fn to_completion_list(items: Vec<String>) -> CompletionList {
+fn to_completion_list(items: Vec<HxAttribute>) -> CompletionList {
     return CompletionList {
         is_incomplete: false,
         items: items
             .iter()
             .map(|x| {
                 return CompletionItem {
-                    label: x.to_string(),
+                    label: x.name.clone(),
                     label_details: None,
                     kind: Some(CompletionItemKind::TEXT),
-                    detail: Some("deez nuts".to_string()),
+                    detail: Some(x.desc.clone()),
                     documentation: None,
                     deprecated: Some(false),
                     preselect: None,
@@ -74,12 +62,13 @@ fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
         };
 
         match match result {
-            Some(HtmxResult::Completion(c)) => {
+            Some(HtmxResult::AttributeCompletion(c)) => {
                 let str = match serde_json::to_value(&to_completion_list(c.items)) {
                     Ok(s) => s,
                     Err(_) => continue,
                 };
 
+                error!("sending response {:?}", str);
                 // TODO: block requests that have been cancelled
                 connection.sender.send(Message::Response(Response {
                     id: c.id,
