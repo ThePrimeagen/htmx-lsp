@@ -1,7 +1,5 @@
-use std::{sync::OnceLock, fs, path::PathBuf};
-use log::error;
+use std::{sync::OnceLock, path::PathBuf};
 use serde::{Serialize, Deserialize};
-use walkdir::WalkDir;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HxAttribute {

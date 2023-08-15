@@ -1,5 +1,4 @@
 use lsp_types::Position;
-use log::error;
 
 pub fn byte_pos_to_line_col(source: &str, byte_pos: usize) -> Position {
     let mut line = 0;

@@ -76,7 +76,6 @@ fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
                     error: None,
                 }))
             }
-            Some(HtmxResult::Diagnostic) => todo!(),
             None => continue,
         } {
             Ok(_) => error!("sent response"),

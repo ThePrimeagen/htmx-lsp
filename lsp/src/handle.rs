@@ -1,5 +1,3 @@
-use std::sync::OnceLock;
-
 use log::{debug, warn, error};
 use lsp_server::{Notification, Message, Request, RequestId};
 
@@ -16,12 +14,6 @@ struct TextDocumentLocation {
 }
 
 #[derive(serde::Deserialize, Debug)]
-struct TextDocument {
-    #[serde(rename = "textDocument")]
-    text_document: TextDocumentLocation,
-}
-
-#[derive(serde::Deserialize, Debug)]
 struct TextDocumentChanges {
     #[serde(rename = "textDocument")]
     text_document: TextDocumentLocation,
@@ -34,26 +26,32 @@ struct TextDocumentChanges {
 struct CompletionContext {
 
     #[serde(rename = "triggerCharacter")]
-    trigger_character: String,
+    _trigger_character: String,
 
     #[serde(rename = "triggerKind")]
-    trigger_kind: u8,
+    _trigger_kind: u8,
 }
 
 #[derive(serde::Deserialize, Debug)]
 struct CompletionPosition {
-    line: usize,
-    character: usize,
+
+    #[serde(rename = "line")]
+    _line: usize,
+
+    #[serde(rename = "character")]
+    _character: usize,
 }
 
 #[derive(serde::Deserialize, Debug)]
 struct CompletionRequest {
-    context: CompletionContext,
+    #[serde(rename = "context")]
+    _context: CompletionContext,
 
     #[serde(rename = "textDocument")]
-    text_document: TextDocumentLocation,
+    _text_document: TextDocumentLocation,
 
-    position: CompletionPosition,
+    #[serde(rename = "position")]
+    _position: CompletionPosition,
 }
 
 #[derive(Debug)]
@@ -64,7 +62,7 @@ pub struct HtmxAttributeCompletion {
 
 #[derive(Debug)]
 pub enum HtmxResult {
-    Diagnostic,
+    // Diagnostic,
     AttributeCompletion(HtmxAttributeCompletion),
 }
 
@@ -91,7 +89,7 @@ fn handle_didChange(noti: Notification) -> Option<HtmxResult> {
 
 #[allow(non_snake_case)]
 fn handle_completion(req: Request) -> Option<HtmxResult> {
-    let completion: CompletionRequest = serde_json::from_value(req.params).ok()?;
+    let _completion: CompletionRequest = serde_json::from_value(req.params).ok()?;
     let id = req.id;
 
     // TODO: clean up clone here if perf is any issue
