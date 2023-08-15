@@ -1,3 +1,5 @@
+use std::sync::OnceLock;
+
 use log::{debug, warn, error};
 use lsp_server::{Notification, Message, Request, RequestId};
 
@@ -107,6 +109,23 @@ fn handle_didChange(noti: Notification) -> Option<HtmxResult> {
     return None
 }
 
+pub static HX_TAGS: OnceLock<Vec<String>> = OnceLock::new();
+pub fn init_hx_tags() {
+    _ = HX_TAGS.set(vec![
+        "hx-get".to_string(),
+        "hx-post".to_string(),
+        "hx-delete".to_string(),
+        "hx-put".to_string(),
+        "hx-patch".to_string(),
+        "hx-vals".to_string(),
+        "hx-include".to_string(),
+        "hx-swap".to_string(),
+        "hx-target".to_string(),
+        "hx-boost".to_string(),
+    ]);
+}
+
+
 #[allow(non_snake_case)]
 fn handle_completion(req: Request) -> Option<HtmxResult> {
     let completion: CompletionRequest = serde_json::from_value(req.params).ok()?;
@@ -114,7 +133,7 @@ fn handle_completion(req: Request) -> Option<HtmxResult> {
 
     error!("completion request: {} {:?}", id, completion);
     return Some(HtmxResult::Completion(HtmxCompletion {
-        items: vec!["hx-post".to_string(), "hx-get".to_string()],
+        items: HX_TAGS.get().expect("constant data should always be present").clone(),
         id,
     }));
 }

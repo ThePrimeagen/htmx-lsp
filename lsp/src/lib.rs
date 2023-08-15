@@ -11,7 +11,7 @@ use lsp_types::{
 use lsp_server::{Connection, Message, Response};
 
 use crate::{
-    handle::{handle_notification, handle_other, handle_request, HtmxResult},
+    handle::{handle_notification, handle_other, handle_request, HtmxResult, init_hx_tags},
     text_store::init_text_store,
 };
 
@@ -100,6 +100,7 @@ fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
 
 pub fn start_lsp() -> Result<()> {
     init_text_store();
+    init_hx_tags();
 
     // Note that  we must have our logging only write out to stderr.
     info!("starting generic LSP server");
