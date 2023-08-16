@@ -47,6 +47,8 @@ pub fn init_hx_tags() {
             ("hx-target", include_str!("./attributes/hx-target.md")),
             ("hx-trigger", include_str!("./attributes/hx-trigger.md")),
             ("hx-vals", include_str!("./attributes/hx-vals.md")),
+            ("hx-push-url", include_str!("./attributes/hx-push-url.md")),
+            ("hx-select", include_str!("./attributes/hx-select.md")),
         ]
             .iter()
             .filter_map(|x| x.try_into().ok())
