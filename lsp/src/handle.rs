@@ -1,6 +1,6 @@
 use log::{debug, warn, error};
 use lsp_server::{Notification, Message, Request, RequestId};
-use lsp_types::CompletionTriggerKind;
+use lsp_types::{CompletionTriggerKind, Position, request::Completion, CompletionParams, CompletionContext};
 
 use crate::{text_store::TEXT_STORE, htmx::{HX_TAGS, HxAttribute}};
 
@@ -21,38 +21,6 @@ struct TextDocumentChanges {
 
     #[serde(rename = "contentChanges")]
     content_changes: Vec<Text>,
-}
-
-#[derive(serde::Deserialize, Debug)]
-struct CompletionContext {
-
-    #[serde(rename = "triggerCharacter")]
-    trigger_character: String,
-
-    #[serde(rename = "triggerKind")]
-    trigger_kind: CompletionTriggerKind,
-}
-
-#[derive(serde::Deserialize, Debug)]
-struct CompletionPosition {
-
-    #[serde(rename = "line")]
-    line: usize,
-
-    #[serde(rename = "character")]
-    character: usize,
-}
-
-#[derive(serde::Deserialize, Debug)]
-struct CompletionRequest {
-    #[serde(rename = "context")]
-    context: CompletionContext,
-
-    #[serde(rename = "textDocument")]
-    text_document: TextDocumentLocation,
-
-    #[serde(rename = "position")]
-    position: CompletionPosition,
 }
 
 #[derive(Debug)]
@@ -90,21 +58,28 @@ fn handle_didChange(noti: Notification) -> Option<HtmxResult> {
 
 #[allow(non_snake_case)]
 fn handle_completion(req: Request) -> Option<HtmxResult> {
-    let completion: CompletionRequest = serde_json::from_value(req.params).ok()?;
+    let completion: CompletionParams = serde_json::from_value(req.params).ok()?;
 
-    match completion.context.trigger_kind {
-        CompletionTriggerKind::TRIGGER_CHARACTER => {
+    match completion.context {
+        Some(CompletionContext {
+            trigger_kind: CompletionTriggerKind::TRIGGER_CHARACTER,
+            ..
+        }) => {
+            return None;
 
+                /*
             // TODO: clean up clone here if perf is any issue
             return Some(HtmxResult::AttributeCompletion(HtmxAttributeCompletion {
                 items: HX_TAGS.get().expect("constant data should always be present").clone(),
                 id: req.id,
             }));
+                */
 
         }
         _ => {
             return None;
         }
+
     };
 
 }

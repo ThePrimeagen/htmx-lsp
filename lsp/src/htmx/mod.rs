@@ -1,5 +1,13 @@
+mod tokenizer;
+
 use std::{sync::OnceLock, path::PathBuf};
+use lsp_types::{CompletionContext, CompletionParams, TextDocumentPositionParams};
 use serde::{Serialize, Deserialize};
+use util::get_text_byte_offset;
+
+use crate::text_store::{TEXT_STORE, get_text_document};
+
+use self::tokenizer::Tokenizer;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HxAttribute {
@@ -29,6 +37,23 @@ impl TryFrom<&(PathBuf, String)> for HxAttribute {
             desc: desc.to_string(),
         });
     }
+}
+
+
+pub enum HxTypeCompletion {
+}
+
+pub fn parse_hx_type(text_params: TextDocumentPositionParams) -> Option<HxTypeCompletion> {
+    let text = get_text_document(text_params.text_document.uri)?;
+    let pos = text_params.position;
+    let end = get_text_byte_offset(&text, pos.line as usize, pos.character as usize)?;
+
+    let tokenizer = Tokenizer::new(&text[..end]);
+
+    return None;
+}
+
+pub fn completion(param: CompletionParams) {
 }
 
 pub static HX_TAGS: OnceLock<Vec<HxAttribute>> = OnceLock::new();
