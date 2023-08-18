@@ -1,0 +1,16 @@
+{
+  "name": "htmx-lsp",
+  "description": "Language Server for HTMX",
+  "author": "ThePrimeagen",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^8.1.0"
+  },
+  "activationEvents": [
+    "onLanguage:html"
+  ],
+  "main": "./extension"
+}
