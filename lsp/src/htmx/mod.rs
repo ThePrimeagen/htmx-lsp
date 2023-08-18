@@ -64,7 +64,7 @@ pub static HX_BOOST: OnceLock<Vec<HxAttribute>> = OnceLock::new();
 pub fn init_hx_tags() {
     _ = HX_BOOST.set(
         vec![
-            ("true", ""),
+            ("true", include_str!("./hx-boost/true.md")),
             ("false", ""),
         ]
         .iter()
