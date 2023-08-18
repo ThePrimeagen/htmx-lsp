@@ -68,6 +68,10 @@ fn handle_completion(req: Request) -> Option<HtmxResult> {
         Some(CompletionContext {
             trigger_kind: CompletionTriggerKind::TRIGGER_CHARACTER,
             ..
+        })
+        | Some(CompletionContext {
+            trigger_kind: CompletionTriggerKind::INVOKED,
+            ..
         }) => {
             return Some(HtmxResult::AttributeCompletion(HtmxAttributeCompletion {
                 items: hx_completion(completion.text_document_position).unwrap_or(vec![]),
