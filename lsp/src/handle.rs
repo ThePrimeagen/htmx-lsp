@@ -2,7 +2,7 @@ use log::{debug, warn, error};
 use lsp_server::{Notification, Message, Request, RequestId};
 use lsp_types::{CompletionTriggerKind, Position, request::Completion, CompletionParams, CompletionContext};
 
-use crate::{text_store::TEXT_STORE, htmx::{HX_TAGS, HxAttribute}};
+use crate::{text_store::TEXT_STORE, htmx::{HX_TAGS, HxAttribute, hx_completion}};
 
 #[derive(serde::Deserialize, Debug)]
 struct Text {
@@ -65,16 +65,10 @@ fn handle_completion(req: Request) -> Option<HtmxResult> {
             trigger_kind: CompletionTriggerKind::TRIGGER_CHARACTER,
             ..
         }) => {
-            return None;
-
-                /*
-            // TODO: clean up clone here if perf is any issue
             return Some(HtmxResult::AttributeCompletion(HtmxAttributeCompletion {
-                items: HX_TAGS.get().expect("constant data should always be present").clone(),
+                items: hx_completion(completion.text_document_position).unwrap_or(vec![]),
                 id: req.id,
             }));
-                */
-
         }
         _ => {
             return None;
