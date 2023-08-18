@@ -55,20 +55,6 @@ pub fn init_hx_tags() {
             .collect()
     );
 
-    /*
-    _ = HX_TAGS.set(vec![
-        ("hx-get", "GET the resource at the provided URL and replaces the element with the hx-swap strategy."),
-        ("hx-post", "POST the element's form data, hx-include, and hx-vals to the URL."),
-        ("hx-delete", "Sends a DELETE request to the URL."),
-        ("hx-put", "Sends a PUT request to the URL."),
-        ("hx-patch", "Sends a PATCH request to the URL."),
-        ("hx-vals", "Submits the element's form data to the URL, but only the named fields."),
-        ("hx-include", "Fetches the resource at the given URL and inserts the response into the element."),
-        ("hx-swap", "Fetches the resource at the given URL and replaces the element with the response, but only the named fields."),
-        ("hx-target", "Fetches the resource at the given URL and replaces the element with the response, but only the named fields."),
-        ("hx-boost", "Fetches the resource at the given URL and replaces the element with the response, but only the named fields."),
-    ].iter().map(|x| x.into()).collect());
-    */
 }
 
 

@@ -1,5 +1,6 @@
 use log::{debug, warn, error};
 use lsp_server::{Notification, Message, Request, RequestId};
+use lsp_types::CompletionTriggerKind;
 
 use crate::{text_store::TEXT_STORE, htmx::{HX_TAGS, HxAttribute}};
 
@@ -26,32 +27,32 @@ struct TextDocumentChanges {
 struct CompletionContext {
 
     #[serde(rename = "triggerCharacter")]
-    _trigger_character: String,
+    trigger_character: String,
 
     #[serde(rename = "triggerKind")]
-    _trigger_kind: u8,
+    trigger_kind: CompletionTriggerKind,
 }
 
 #[derive(serde::Deserialize, Debug)]
 struct CompletionPosition {
 
     #[serde(rename = "line")]
-    _line: usize,
+    line: usize,
 
     #[serde(rename = "character")]
-    _character: usize,
+    character: usize,
 }
 
 #[derive(serde::Deserialize, Debug)]
 struct CompletionRequest {
     #[serde(rename = "context")]
-    _context: CompletionContext,
+    context: CompletionContext,
 
     #[serde(rename = "textDocument")]
-    _text_document: TextDocumentLocation,
+    text_document: TextDocumentLocation,
 
     #[serde(rename = "position")]
-    _position: CompletionPosition,
+    position: CompletionPosition,
 }
 
 #[derive(Debug)]
@@ -89,14 +90,23 @@ fn handle_didChange(noti: Notification) -> Option<HtmxResult> {
 
 #[allow(non_snake_case)]
 fn handle_completion(req: Request) -> Option<HtmxResult> {
-    let _completion: CompletionRequest = serde_json::from_value(req.params).ok()?;
-    let id = req.id;
+    let completion: CompletionRequest = serde_json::from_value(req.params).ok()?;
 
-    // TODO: clean up clone here if perf is any issue
-    return Some(HtmxResult::AttributeCompletion(HtmxAttributeCompletion {
-        items: HX_TAGS.get().expect("constant data should always be present").clone(),
-        id,
-    }));
+    match completion.context.trigger_kind {
+        CompletionTriggerKind::TRIGGER_CHARACTER => {
+
+            // TODO: clean up clone here if perf is any issue
+            return Some(HtmxResult::AttributeCompletion(HtmxAttributeCompletion {
+                items: HX_TAGS.get().expect("constant data should always be present").clone(),
+                id: req.id,
+            }));
+
+        }
+        _ => {
+            return None;
+        }
+    };
+
 }
 
 pub fn handle_request(req: Request) -> Option<HtmxResult> {

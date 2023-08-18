@@ -20,7 +20,7 @@ use crate::{
 
 fn to_completion_list(items: Vec<HxAttribute>) -> CompletionList {
     return CompletionList {
-        is_incomplete: false,
+        is_incomplete: true,
         items: items
             .iter()
             .map(|x| {
@@ -102,7 +102,12 @@ pub fn start_lsp() -> Result<()> {
         text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
         completion_provider: Some(lsp_types::CompletionOptions {
             resolve_provider: Some(false),
-            trigger_characters: Some(vec!["-".to_string()]),
+            trigger_characters: Some(vec![
+                "-".to_string(),
+                "\"".to_string(),
+                " ".to_string(),
+                ",".to_string(),
+            ]),
             work_done_progress_options: WorkDoneProgressOptions {
                 work_done_progress: None,
             },
