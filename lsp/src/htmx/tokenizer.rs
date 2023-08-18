@@ -2,6 +2,7 @@ use serde::{Serialize, Deserialize};
 
 
 // TODO: Perf, i get it
+#[derive(Debug, Clone)]
 pub struct Tokenizer {
     text: String,
     offset: usize,
@@ -96,11 +97,82 @@ impl Tokenizer {
 
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum HxPosition {
+    InAttribute,
+    InAttributeValue { hx_key: &'static str, current_value: String },
+}
+
+// TODO: upgrade to TreeSitter
+pub fn hx_parse(str: &str) -> Option<HxPosition> {
+    let mut tokenizer = Tokenizer::new(str);
+    let first_token = tokenizer.next_token()?;
+
+    match first_token {
+        HxToken::Ident(x) => {
+            if x == "hx-" {
+                return Some(HxPosition::InAttribute);
+            }
+        }
+        HxToken::DoubleQuote => {
+            let tokens = read_until(&mut tokenizer, |x| {
+                match x {
+                    HxToken::Ident(_) => true,
+                    _ => false,
+                }
+            });
+
+            if let Some(HxToken::Ident(x)) = tokens.last() {
+                if x == "hx-boost" {
+                    return Some(HxPosition::InAttributeValue {
+                        hx_key: "hx-boost",
+                        current_value: "".to_string(),
+                    });
+                }
+            }
+        }
+
+        _ => {},
+    }
+
+    return None;
+}
+
+fn read_until(tokenizer: &mut Tokenizer, until: fn(x: HxToken) -> bool) -> Vec<HxToken> {
+    let mut tokens = Vec::new();
+
+    while let Some(token) = tokenizer.next_token() {
+        tokens.push(token.clone());
+        if until(token) {
+            break;
+        }
+    }
+
+    return tokens;
+}
+
+
 #[cfg(test)]
 mod test {
     use anyhow::Result;
 
     use crate::htmx::tokenizer::HxToken;
+
+    use super::hx_parse;
+
+    #[test]
+    fn hx_parse_attribute() -> Result<()> {
+        let attr = hx_parse("foo\" hx-");
+        assert_eq!(attr, Some(super::HxPosition::InAttribute));
+        return Ok(());
+    }
+
+    #[test]
+    fn hx_parse_boost() -> Result<()> {
+        let attr = hx_parse("foo\" hx-boost=\"");
+        assert_eq!(attr, Some(super::HxPosition::InAttribute));
+        return Ok(());
+    }
 
     #[test]
     fn test_parsing() -> Result<()> {

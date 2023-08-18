@@ -105,9 +105,6 @@ pub fn start_lsp() -> Result<()> {
             trigger_characters: Some(vec![
                 "-".to_string(),
                 "\"".to_string(),
-                " ".to_string(),
-                ",".to_string(),
-                ":".to_string(),
             ]),
             work_done_progress_options: WorkDoneProgressOptions {
                 work_done_progress: None,

@@ -1,13 +1,13 @@
 mod tokenizer;
 
-use lsp_types::{CompletionContext, CompletionParams, TextDocumentPositionParams};
+use lsp_types::TextDocumentPositionParams;
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, sync::OnceLock};
 use util::get_text_byte_offset;
 
 use crate::text_store::{get_text_document, TEXT_STORE};
 
-use self::tokenizer::{HxToken, Tokenizer};
+use self::tokenizer::{hx_parse, HxPosition, HxToken, Tokenizer};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HxAttribute {
@@ -44,16 +44,13 @@ pub fn hx_completion(text_params: TextDocumentPositionParams) -> Option<Vec<HxAt
     let pos = text_params.position;
     let end = get_text_byte_offset(&text, pos.line as usize, pos.character as usize)?;
 
-    let mut tokenizer = Tokenizer::new(&text[..end]);
-
-    let first_token = tokenizer.next_token()?;
-
-    match first_token {
-        HxToken::Ident(x) => {
-            if x == "hx-" {
-                // TODO: shitty performance
-                return HX_TAGS.get().cloned();
-            }
+    let position = hx_parse(&text[..end]);
+    match position {
+        Some(HxPosition::InAttribute) => {
+            return HX_TAGS.get().cloned();
+        }
+        Some(HxPosition::InAttributeValue { hx_key: "hx-boost", .. }) => {
+            return HX_BOOST.get().cloned();
         }
         _ => {}
     }
@@ -62,8 +59,19 @@ pub fn hx_completion(text_params: TextDocumentPositionParams) -> Option<Vec<HxAt
 }
 
 pub static HX_TAGS: OnceLock<Vec<HxAttribute>> = OnceLock::new();
+pub static HX_BOOST: OnceLock<Vec<HxAttribute>> = OnceLock::new();
 
 pub fn init_hx_tags() {
+    _ = HX_BOOST.set(
+        vec![
+            ("true", ""),
+            ("false", ""),
+        ]
+        .iter()
+        .filter_map(|x| x.try_into().ok())
+        .collect(),
+    );
+
     _ = HX_TAGS.set(
         vec![
             ("hx-boost", include_str!("./attributes/hx-boost.md")),

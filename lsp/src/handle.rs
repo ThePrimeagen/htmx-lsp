@@ -1,8 +1,11 @@
-use log::{debug, warn, error};
-use lsp_server::{Notification, Message, Request, RequestId};
-use lsp_types::{CompletionTriggerKind, Position, request::Completion, CompletionParams, CompletionContext};
+use log::{debug, error, warn};
+use lsp_server::{Message, Notification, Request, RequestId};
+use lsp_types::{CompletionContext, CompletionParams, CompletionTriggerKind};
 
-use crate::{text_store::TEXT_STORE, htmx::{HX_TAGS, HxAttribute, hx_completion}};
+use crate::{
+    htmx::{hx_completion, HxAttribute},
+    text_store::TEXT_STORE,
+};
 
 #[derive(serde::Deserialize, Debug)]
 struct Text {
@@ -51,9 +54,10 @@ fn handle_didChange(noti: Notification) -> Option<HtmxResult> {
         .expect("text store not initialized")
         .lock()
         .expect("text store mutex poisoned")
-        .texts.insert(uri, text);
+        .texts
+        .insert(uri, text);
 
-    return None
+    return None;
 }
 
 #[allow(non_snake_case)]
@@ -73,9 +77,7 @@ fn handle_completion(req: Request) -> Option<HtmxResult> {
         _ => {
             return None;
         }
-
     };
-
 }
 
 pub fn handle_request(req: Request) -> Option<HtmxResult> {
@@ -100,5 +102,5 @@ pub fn handle_notification(noti: Notification) -> Option<HtmxResult> {
 
 pub fn handle_other(msg: Message) -> Option<HtmxResult> {
     warn!("unhandled message {:?}", msg);
-    return None
+    return None;
 }
