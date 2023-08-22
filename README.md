@@ -1,13 +1,13 @@
 # HTMX LSP
 Right now this is very much so a work in progress.
 
-# WARNING
-I will reject all PRs for the time being as i just start get the repo in shape.
-But i would totally not reject any example PRs.  Meaning:
+# GREAT NEWS!
+We have reached a point where i could use help!  If you want to fill in documentation or help with autocompletes please make an issue / make a pr!
 
-- you pr a change on how you would go about doing code actions
-- (anything else you wish to show me)
-
+# BIG TODOS LEFT
+* all the autocomplete based on the hx-* attributes
+* distribute binary
+  
 # Integration
 There is no vim or vscode specific integration, but!!! i do have an example of
 launching servers and listening to them for neovim in
