@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "extensionHost",
+      "request": "launch",
+      "name": "Debug LSP Extension",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceRoot}/client/vscode",
+        "--disable-extensions",
+        "${workspaceRoot}/htmx.test.html"
+      ]
+    }
+  ]
+}
