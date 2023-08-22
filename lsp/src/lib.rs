@@ -1,3 +1,4 @@
+mod tree_sitter;
 mod handle;
 mod text_store;
 mod htmx;

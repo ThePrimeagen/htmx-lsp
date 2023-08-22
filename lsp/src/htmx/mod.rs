@@ -1,5 +1,3 @@
-mod tokenizer;
-
 use lsp_types::TextDocumentPositionParams;
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, sync::OnceLock};

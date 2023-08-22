@@ -11,10 +11,17 @@ clap.workspace = true
 log.workspace = true
 structured-logger.workspace = true
 walkdir.workspace = true
+tree-sitter.workspace = true
+tree-sitter-html.workspace = true
 lsp = { path = "./lsp" }
 util = { path = "./util" }
 
+[build-dependencies]
+cc="*"
+
 [workspace.dependencies]
+tree-sitter = "0.20.10"
+tree-sitter-html = "0.19.0"
 walkdir = "2.3.3"
 anyhow = "1.0.72"
 clap = { version = "4.3.17", features = ["derive", "env"] }
