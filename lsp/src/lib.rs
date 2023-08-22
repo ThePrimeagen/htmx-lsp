@@ -4,7 +4,7 @@ mod text_store;
 mod htmx;
 
 use anyhow::Result;
-use htmx::HxAttribute;
+use htmx::HxCompletion;
 use log::{error, info, warn};
 use lsp_types::{
     CompletionItem, CompletionItemKind, CompletionList, InitializeParams, ServerCapabilities,
@@ -19,7 +19,7 @@ use crate::{
     htmx::init_hx_tags,
 };
 
-fn to_completion_list(items: Vec<HxAttribute>) -> CompletionList {
+fn to_completion_list(items: Vec<HxCompletion>) -> CompletionList {
     return CompletionList {
         is_incomplete: true,
         items: items
@@ -106,6 +106,7 @@ pub fn start_lsp() -> Result<()> {
             trigger_characters: Some(vec![
                 "-".to_string(),
                 "\"".to_string(),
+                " ".to_string(),
             ]),
             work_done_progress_options: WorkDoneProgressOptions {
                 work_done_progress: None,

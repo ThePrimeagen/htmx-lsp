@@ -3,7 +3,7 @@ use lsp_server::{Message, Notification, Request, RequestId};
 use lsp_types::{CompletionContext, CompletionParams, CompletionTriggerKind};
 
 use crate::{
-    htmx::{hx_completion, HxAttribute},
+    htmx::{hx_completion, HxCompletion},
     text_store::TEXT_STORE,
 };
 
@@ -28,7 +28,7 @@ struct TextDocumentChanges {
 
 #[derive(Debug)]
 pub struct HtmxAttributeCompletion {
-    pub items: Vec<HxAttribute>,
+    pub items: Vec<HxCompletion>,
     pub id: RequestId,
 }
 

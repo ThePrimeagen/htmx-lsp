@@ -1,19 +1,18 @@
+use log::error;
 use lsp_types::TextDocumentPositionParams;
 use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, sync::OnceLock};
+use std::{path::PathBuf, sync::OnceLock, collections::HashMap};
 use util::get_text_byte_offset;
 
-use crate::text_store::{get_text_document, TEXT_STORE};
-
-use self::tokenizer::{hx_parse, HxPosition, HxToken, Tokenizer};
+use crate::tree_sitter::Position;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct HxAttribute {
+pub struct HxCompletion {
     pub name: String,
     pub desc: String,
 }
 
-impl From<&(&str, &str)> for HxAttribute {
+impl From<&(&str, &str)> for HxCompletion {
     fn from((name, desc): &(&str, &str)) -> Self {
         Self {
             name: name.to_string(),
@@ -22,7 +21,7 @@ impl From<&(&str, &str)> for HxAttribute {
     }
 }
 
-impl TryFrom<&(PathBuf, String)> for HxAttribute {
+impl TryFrom<&(PathBuf, String)> for HxCompletion {
     type Error = anyhow::Error;
 
     fn try_from((path, desc): &(PathBuf, String)) -> Result<Self, Self::Error> {
@@ -37,41 +36,58 @@ impl TryFrom<&(PathBuf, String)> for HxAttribute {
     }
 }
 
-pub fn hx_completion(text_params: TextDocumentPositionParams) -> Option<Vec<HxAttribute>> {
-    let text = get_text_document(text_params.text_document.uri)?;
-    let pos = text_params.position;
-    let end = get_text_byte_offset(&text, pos.line as usize, pos.character as usize)?;
+pub fn hx_completion(text_params: TextDocumentPositionParams) -> Option<Vec<HxCompletion>> {
 
-    let position = hx_parse(&text[..end]);
-    match position {
-        Some(HxPosition::InAttribute) => {
-            return HX_TAGS.get().cloned();
-        }
-        Some(HxPosition::InAttributeValue { hx_key: "hx-boost", .. }) => {
-            return HX_BOOST.get().cloned();
-        }
-        _ => {}
-    }
+    let result = crate::tree_sitter::get_position_from_lsp_completion(text_params)?;
+
+    match result {
+        Position::AttributeName(name) => {
+            if name.starts_with("hx-") {
+                return HX_TAGS.get().cloned();
+            }
+        },
+
+        Position::AttributeValue { name, .. } => {
+            let values = HX_ATTRIBUTE_VALUES.get()?.get(&name)?;
+            return Some(values.clone());
+        },
+    };
 
     return None;
 }
 
-pub static HX_TAGS: OnceLock<Vec<HxAttribute>> = OnceLock::new();
-pub static HX_BOOST: OnceLock<Vec<HxAttribute>> = OnceLock::new();
+pub static HX_TAGS: OnceLock<Vec<HxCompletion>> = OnceLock::new();
+pub static HX_ATTRIBUTE_VALUES: OnceLock<HashMap<String, Vec<HxCompletion>>> = OnceLock::new();
 
-pub fn init_hx_tags() {
-    _ = HX_BOOST.set(
-        vec![
-            ("true", include_str!("./hx-boost/true.md")),
-            ("false", ""),
-        ]
+fn to_hx_completion(values: Vec<(&str, &str)>) -> Vec<HxCompletion> {
+    return values
         .iter()
         .filter_map(|x| x.try_into().ok())
-        .collect(),
-    );
+        .collect();
+}
+
+pub fn init_hx_tags() {
+    _ = HX_ATTRIBUTE_VALUES.set(
+        maplit::hashmap!{
+            String::from("hx-boost") => to_hx_completion(vec![
+                ("true", ""),
+                ("false", ""),
+            ]),
+
+            String::from("hx-swap") => to_hx_completion(vec![
+                ("innerHTML", include_str!("./hx-swap/innerHTML.md")),
+                ("outerHTML", include_str!("./hx-swap/outerHTML.md")),
+                ("afterbegin", include_str!("./hx-swap/afterbegin.md")),
+                ("afterend", include_str!("./hx-swap/afterend.md")),
+                ("beforebegin", include_str!("./hx-swap/beforebegin.md")),
+                ("beforeend", include_str!("./hx-swap/beforeend.md")),
+                ("delete", include_str!("./hx-swap/delete.md")),
+                ("none", include_str!("./hx-swap/none.md")),
+            ]),
+        });
 
     _ = HX_TAGS.set(
-        vec![
+        to_hx_completion(vec![
             ("hx-boost", include_str!("./attributes/hx-boost.md")),
             ("hx-delete", include_str!("./attributes/hx-delete.md")),
             ("hx-get", include_str!("./attributes/hx-get.md")),
@@ -85,9 +101,6 @@ pub fn init_hx_tags() {
             ("hx-vals", include_str!("./attributes/hx-vals.md")),
             ("hx-push-url", include_str!("./attributes/hx-push-url.md")),
             ("hx-select", include_str!("./attributes/hx-select.md")),
-        ]
-        .iter()
-        .filter_map(|x| x.try_into().ok())
-        .collect(),
+        ])
     );
 }
