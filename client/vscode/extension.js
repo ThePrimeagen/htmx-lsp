@@ -1,8 +1,11 @@
+// @ts-check
 const { LanguageClient } = require("vscode-languageclient/node");
 const tmpdir = require("os").tmpdir();
 
 module.exports = {
+  /** @param {import("vscode").ExtensionContext} context*/
   activate(context) {
+    /** @type {import("vscode-languageclient/node").ServerOptions} */
     const serverOptions = {
       run: {
         command: "htmx-lsp",
@@ -13,6 +16,7 @@ module.exports = {
       },
     };
 
+    /** @type {import("vscode-languageclient/node").LanguageClientOptions} */
     const clientOptions = {
       documentSelector: [{ scheme: "file", language: "html" }],
     };
