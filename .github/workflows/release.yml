@@ -8,7 +8,36 @@ on:
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.build.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build:
+          - {
+              NAME: linux-x64,
+              OS: ubuntu-22.04,
+              TARGET: x86_64-unknown-linux-gnu,
+            }
+          - {
+              NAME: windows-x64,
+              OS: windows-2022,
+              TARGET: x86_64-pc-windows-msvc,
+            }
+          - {
+              NAME: windows-arm64,
+              OS: windows-2022,
+              TARGET: aarch64-pc-windows-msvc,
+            }
+          - {
+              NAME: darwin-x64,
+              OS: macos-12,
+              TARGET: x86_64-apple-darwin,
+            }
+          - {
+              NAME: darwin-arm64,
+              OS: macos-12,
+              TARGET: aarch64-apple-darwin,
+            }
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -17,4 +46,4 @@ jobs:
         uses: "./.github/actions/setup-rust-env"
 
       - name: Build
-        run: cargo build --release
+        run: cargo build --release --locked --target ${{ matrix.build.TARGET }}
