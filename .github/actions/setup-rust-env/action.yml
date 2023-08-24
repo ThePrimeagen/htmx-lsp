@@ -1,0 +1,15 @@
+name: "Setup Rust Environment"
+
+description: "Setup the Rust CI environment for GitHub Action runners"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Rust toolchain
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: stable
+        components: rustfmt, clippy
+
+    - name: Setup rust cache
+      uses: Swatinem/rust-cache@v2

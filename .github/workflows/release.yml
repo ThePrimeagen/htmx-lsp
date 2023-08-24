@@ -1,0 +1,20 @@
+name: Build & Release
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Rust env
+        uses: "./.github/actions/setup-rust-env"
+
+      - name: Build
+        run: cargo build --release
