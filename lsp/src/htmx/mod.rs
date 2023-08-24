@@ -84,6 +84,14 @@ pub fn init_hx_tags() {
                 ("delete", include_str!("./hx-swap/delete.md")),
                 ("none", include_str!("./hx-swap/none.md")),
             ]),
+
+            String::from("hx-trigger") => to_hx_completion(vec![
+                ("closest", include_str!("./hx-target/closest.md")),
+                ("find", include_str!("./hx-target/find.md")),
+                ("next", include_str!("./hx-target/next.md")),
+                ("prev", include_str!("./hx-target/prev.md")),
+                ("this", include_str!("./hx-target/this.md")),
+            ]),
         });
 
     _ = HX_TAGS.set(
