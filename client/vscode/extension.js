@@ -1,26 +1,24 @@
-const { LanguageClient } = require("vscode-languageclient");
+// @ts-check
+const { LanguageClient } = require("vscode-languageclient/node");
 const tmpdir = require("os").tmpdir();
 
 module.exports = {
+  /** @param {import("vscode").ExtensionContext} context*/
   activate(context) {
-    const cmd = "htmx-lsp";
-
+    /** @type {import("vscode-languageclient/node").ServerOptions} */
     const serverOptions = {
       run: {
-        command: cmd,
+        command: "htmx-lsp",
       },
       debug: {
-        command: cmd,
+        command: "htmx-lsp",
         args: ["--file", `${tmpdir}/lsp.log`, "--level", "TRACE"],
       },
     };
 
+    /** @type {import("vscode-languageclient/node").LanguageClientOptions} */
     const clientOptions = {
-      documentSelector: [
-        {
-          language: "html",
-        },
-      ],
+      documentSelector: [{ scheme: "file", language: "html" }],
     };
 
     const client = new LanguageClient(
@@ -30,6 +28,6 @@ module.exports = {
       clientOptions
     );
 
-    context.subscriptions.push(client.start());
+    client.start();
   },
 };
