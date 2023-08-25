@@ -67,3 +67,20 @@ jobs:
         with:
           name: built-binaries
           path: bin/*
+
+  release:
+    name: Release
+    runs-on: ubuntu-22.04
+    needs: build
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+
+      - name: Download binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: built-binaries
+          path: bin
