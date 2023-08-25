@@ -95,6 +95,11 @@ pub fn init_hx_tags() {
                 ("this", include_str!("./hx-target/this.md")),
             ]),
 
+            String::from("hx-boost") => to_hx_completion(vec![
+                ("true", include_str!("./hx-boost/true.md")),
+                ("false", include_str!("./hx-boost/false.md")),
+            ]),
+
             String::from("hx-trigger") => to_hx_completion(vec![
                 ("click", include_str!("./hx-trigger/click.md")),
                 ("once", include_str!("./hx-trigger/once.md")),
