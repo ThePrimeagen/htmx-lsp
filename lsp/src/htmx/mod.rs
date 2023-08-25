@@ -94,6 +94,23 @@ pub fn init_hx_tags() {
                 ("prev", include_str!("./hx-target/prev.md")),
                 ("this", include_str!("./hx-target/this.md")),
             ]),
+
+            String::from("hx-trigger") => to_hx_completion(vec![
+                ("click", include_str!("./hx-trigger/click.md")),
+                ("once", include_str!("./hx-trigger/once.md")),
+                ("changed", include_str!("./hx-trigger/changed.md")),
+                ("delay:", include_str!("./hx-trigger/delay.md")),
+                ("throttle:", include_str!("./hx-trigger/throttle.md")),
+                ("from:", include_str!("./hx-trigger/from.md")),
+                ("target:", include_str!("./hx-trigger/target.md")),
+                ("consume", include_str!("./hx-trigger/consume.md")),
+                ("queue:", include_str!("./hx-trigger/queue.md")),
+                ("keyup", include_str!("./hx-trigger/keyup.md")),
+                ("load", include_str!("./hx-trigger/load.md")),
+                ("revealed", include_str!("./hx-trigger/revealed.md")),
+                ("intersect", include_str!("./hx-trigger/intersect.md")),
+                ("every", include_str!("./hx-trigger/every.md")),
+            ])
         });
 
     _ = HX_TAGS.set(
