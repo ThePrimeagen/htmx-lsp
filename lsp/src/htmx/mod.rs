@@ -115,6 +115,31 @@ pub fn init_hx_tags() {
                 ("revealed", include_str!("./hx-trigger/revealed.md")),
                 ("intersect", include_str!("./hx-trigger/intersect.md")),
                 ("every", include_str!("./hx-trigger/every.md")),
+            ]),
+
+            String::from("hx-ext") => to_hx_completion(vec![
+                ("ajax-header", include_str!("./hx-ext/ajax-header.md")),
+                ("alpine-morph", include_str!("./hx-ext/alpine-morph.md")),
+                ("class-tools", include_str!("./hx-ext/class-tools.md")),
+                ("client-side-templates", include_str!("./hx-ext/client-side-templates.md")),
+                ("debug", include_str!("./hx-ext/debug.md")),
+                ("disable-element", include_str!("./hx-ext/disable-element.md")),
+                ("event-header", include_str!("./hx-ext/event-header.md")),
+                ("head-support", include_str!("./hx-ext/head-support.md")),
+                ("include-vals", include_str!("./hx-ext/include-vals.md")),
+                ("json-enc", include_str!("./hx-ext/json-enc.md")),
+                ("morph", include_str!("./hx-ext/morph.md")),
+                ("loading-states", include_str!("./hx-ext/loading-states.md")),
+                ("method-override", include_str!("./hx-ext/method-override.md")),
+                ("morphdom-swap", include_str!("./hx-ext/morphdom-swap.md")),
+                ("multi-swap", include_str!("./hx-ext/multi-swap.md")),
+                ("path-deps", include_str!("./hx-ext/path-deps.md")),
+                ("preload", include_str!("./hx-ext/preload.md")),
+                ("remove-me", include_str!("./hx-ext/remove-me.md")),
+                ("response-targets", include_str!("./hx-ext/response-targets.md")),
+                ("restored", include_str!("./hx-ext/restored.md")),
+                ("sse", include_str!("./hx-ext/sse.md")),
+                ("ws", include_str!("./hx-ext/ws.md")),
             ])
         });
 
@@ -133,6 +158,7 @@ pub fn init_hx_tags() {
             ("hx-vals", include_str!("./attributes/hx-vals.md")),
             ("hx-push-url", include_str!("./attributes/hx-push-url.md")),
             ("hx-select", include_str!("./attributes/hx-select.md")),
+            ("hx-ext", include_str!("./attributes/hx-ext.md")),
         ])
     );
 }
