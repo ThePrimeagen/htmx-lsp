@@ -52,15 +52,15 @@ jobs:
         shell: bash
         run: |
           binary_name="htmx-lsp"
-          node_os=$(echo "${{ matrix.build.NAME }}" | cut -d '-' -f1)
 
-          # note: windows binaries has '.exe' extension
-          if [ "$node_os" = "windows" ]; then
-            binary_name="${binary_name}.exe"
+          extension=""
+          # windows binaries have ".exe" extension
+          if [[ "${{ matrix.build.OS }}" == *"windows"* ]]; then
+            extension=".exe"
           fi
 
           mkdir bin
-          cp "target/${{ matrix.build.TARGET }}/release/${binary_name}" "bin/${binary_name}-${{ matrix.build.NAME }}"
+          cp "target/${{ matrix.build.TARGET }}/release/${binary_name}" "bin/${binary_name}-${{ matrix.build.NAME }}${extension}"
 
       - name: Upload binary
         uses: actions/upload-artifact@v3
