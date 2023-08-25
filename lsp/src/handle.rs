@@ -64,6 +64,8 @@ fn handle_didChange(noti: Notification) -> Option<HtmxResult> {
 fn handle_completion(req: Request) -> Option<HtmxResult> {
     let completion: CompletionParams = serde_json::from_value(req.params).ok()?;
 
+    error!("handle_completion: {:?}", completion);
+
     match completion.context {
         Some(CompletionContext {
             trigger_kind: CompletionTriggerKind::TRIGGER_CHARACTER,
@@ -73,18 +75,30 @@ fn handle_completion(req: Request) -> Option<HtmxResult> {
             trigger_kind: CompletionTriggerKind::INVOKED,
             ..
         }) => {
+            let items = match hx_completion(completion.text_document_position) {
+                Some(items) => items,
+                None => {
+                    error!("EMPTY RESULTS OF COMPLETION");
+                    return None;
+                }
+            };
+
+            error!("handled result: {:?}: completion result: {:?}", completion.context, items);
+
             return Some(HtmxResult::AttributeCompletion(HtmxAttributeCompletion {
-                items: hx_completion(completion.text_document_position).unwrap_or(vec![]),
+                items,
                 id: req.id,
             }));
         }
         _ => {
+            error!("unhandled completion context: {:?}", completion.context);
             return None;
         }
     };
 }
 
 pub fn handle_request(req: Request) -> Option<HtmxResult> {
+    error!("handle_request");
     match req.method.as_str() {
         "textDocument/completion" => handle_completion(req),
         _ => {

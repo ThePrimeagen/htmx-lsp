@@ -56,6 +56,7 @@ fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
     info!("STARTING EXAMPLE MAIN LOOP");
 
     for msg in &connection.receiver {
+        error!("connection received message: {:?}", msg);
         let result = match msg {
             Message::Notification(not) => handle_notification(not),
             Message::Request(req) => handle_request(req),
@@ -69,7 +70,6 @@ fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
                     Err(_) => continue,
                 };
 
-                error!("sending response {:?}", str);
                 // TODO: block requests that have been cancelled
                 connection.sender.send(Message::Response(Response {
                     id: c.id,
@@ -79,7 +79,7 @@ fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
             }
             None => continue,
         } {
-            Ok(_) => error!("sent response"),
+            Ok(_) => {},
             Err(e) => error!("failed to send response: {:?}", e),
         };
     }

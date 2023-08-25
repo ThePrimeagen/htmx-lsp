@@ -38,7 +38,9 @@ impl TryFrom<&(PathBuf, String)> for HxCompletion {
 
 pub fn hx_completion(text_params: TextDocumentPositionParams) -> Option<Vec<HxCompletion>> {
 
-    let result = crate::tree_sitter::get_position_from_lsp_completion(text_params)?;
+    let result = crate::tree_sitter::get_position_from_lsp_completion(text_params.clone())?;
+
+    error!("result: {:?} params: {:?}", result, text_params);
 
     match result {
         Position::AttributeName(name) => {
@@ -85,7 +87,7 @@ pub fn init_hx_tags() {
                 ("none", include_str!("./hx-swap/none.md")),
             ]),
 
-            String::from("hx-trigger") => to_hx_completion(vec![
+            String::from("hx-target") => to_hx_completion(vec![
                 ("closest", include_str!("./hx-target/closest.md")),
                 ("find", include_str!("./hx-target/find.md")),
                 ("next", include_str!("./hx-target/next.md")),

@@ -57,13 +57,14 @@ fn create_attribute(node: Node<'_>, source: &str) -> Option<Position> {
 }
 
 fn get_position(root: Node<'_>, source: &str, row: usize, column: usize) -> Option<Position> {
+    error!("get_position");
+
     let desc = root.descendant_for_point_range(
         Point { row, column },
-        Point {
-            row,
-            column: column + 1,
-        },
+        Point { row, column },
     )?;
+
+    error!("get_position: desc {:?}", desc);
 
     return create_attribute(desc, source)
 }
@@ -72,8 +73,11 @@ pub fn get_position_from_lsp_completion(
     text_params: TextDocumentPositionParams,
 ) -> Option<Position> {
 
+    error!("get_position_from_lsp_completion");
     let text = get_text_document(text_params.text_document.uri)?;
+    error!("get_position_from_lsp_completion: text {}", text);
     let pos = text_params.position;
+    error!("get_position_from_lsp_completion: pos {:?}", pos);
 
     // TODO: Gallons of perf work can be done starting here
     let mut parser = Parser::new();
@@ -82,13 +86,13 @@ pub fn get_position_from_lsp_completion(
         .set_language(tree_sitter_html::language())
         .expect("could not load html grammer");
 
-    let tree = parser.parse(&text, None).unwrap();
+    let tree = parser.parse(&text, None)?;
     let root_node = tree.root_node();
 
     return get_position(
         root_node,
         text.as_str(),
         pos.line as usize,
-        pos.character as usize - 1,
+        pos.character as usize,
     );
 }
