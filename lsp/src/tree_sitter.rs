@@ -93,7 +93,11 @@ fn create_attribute(node: Node<'_>, source: &str) -> Option<Position> {
 }
 
 fn get_position(root: Node<'_>, source: &str, row: usize, column: usize) -> Option<Position> {
+    error!("get_position");
+
     let desc = root.descendant_for_point_range(Point { row, column }, Point { row, column })?;
+
+    error!("get_position: desc {:?}", desc);
 
     return create_attribute(desc, source);
 }
