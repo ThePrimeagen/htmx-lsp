@@ -123,20 +123,11 @@ mod test {
     use std::sync::Once;
 
     static SETUP: Once = Once::new();
-    fn prepare_store() {
+    fn prepare_store(file: &str, content: &str) -> () {
         SETUP.call_once(|| {
             init_hx_tags();
             init_text_store();
         });
-    }
-
-    #[test]
-    fn test_it_presents_htmx_tags_after_hx_dash() {
-        prepare_store();
-
-        let file = "file:///test2.html";
-        let content = r#"<div hx- "#;
-        let file_url = Url::parse(file).unwrap();
 
         TEXT_STORE
             .get()
@@ -145,7 +136,15 @@ mod test {
             .expect("text store mutex poisoned")
             .texts
             .insert(file.to_string(), content.to_string());
+    }
 
+    #[test]
+    fn test_it_presents_htmx_tags_after_hx_dash() {
+        let file = "file:///test2.html";
+        let content = r#"<div hx- "#;
+        let file_url = Url::parse(file).unwrap();
+
+        prepare_store(file, content);
         let completion = hx_completion(TextDocumentPositionParams {
             text_document: TextDocumentIdentifier { uri: file_url },
             position: Position {
@@ -154,7 +153,7 @@ mod test {
             },
         });
 
-        let completions = completion.expect("completion is none");
+        let completions = completion.expect("completion must not be none");
         assert_eq!(
             completions
                 .into_iter()
@@ -180,29 +179,21 @@ mod test {
 
     #[test]
     fn test_it_presents_htmx_tags_after_hx_dash_when_eval_in_error() {
-        prepare_store();
-
         let file = "file:///test3.html";
         let content = r#"<div><div hx- </div>"#;
         let file_url = Url::parse(file).unwrap();
 
-        TEXT_STORE
-            .get()
-            .expect("text store not initialized")
-            .lock()
-            .expect("text store mutex poisoned")
-            .texts
-            .insert(file.to_string(), content.to_string());
+        prepare_store(file, content);
 
-        let completion = hx_completion(TextDocumentPositionParams {
+        let completions = hx_completion(TextDocumentPositionParams {
             text_document: TextDocumentIdentifier { uri: file_url },
             position: Position {
                 line: 0,
                 character: 13,
             },
-        });
+        })
+        .expect("completion must not be none");
 
-        let completions = completion.expect("completion is none");
         assert_eq!(
             completions
                 .into_iter()
@@ -228,29 +219,21 @@ mod test {
 
     #[test]
     fn test_it_presents_htmx_tags_after_hx_dash_for_normal_tags() {
-        prepare_store();
-
         let file = "file:///normaltag.html";
         let content = r#"<div hx- </div>"#;
         let file_url = Url::parse(file).unwrap();
 
-        TEXT_STORE
-            .get()
-            .expect("text store not initialized")
-            .lock()
-            .expect("text store mutex poisoned")
-            .texts
-            .insert(file.to_string(), content.to_string());
+        prepare_store(file, content);
 
-        let completion = hx_completion(TextDocumentPositionParams {
+        let completions = hx_completion(TextDocumentPositionParams {
             text_document: TextDocumentIdentifier { uri: file_url },
             position: Position {
                 line: 0,
                 character: 8,
             },
-        });
+        })
+        .expect("completion must not be none");
 
-        let completions = completion.expect("completion is none");
         assert_eq!(
             completions
                 .into_iter()
@@ -276,29 +259,21 @@ mod test {
 
     #[test]
     fn test_it_presents_htmx_targets_after_first_quote() {
-        prepare_store();
-
         let file = "file:///test1.html";
         let content = r#"<div hx-target=" "#;
         let file_url = Url::parse(file).unwrap();
 
-        TEXT_STORE
-            .get()
-            .expect("text store not initialized")
-            .lock()
-            .expect("text store mutex poisoned")
-            .texts
-            .insert(file.to_string(), content.to_string());
+        prepare_store(file, content);
 
-        let completion = hx_completion(TextDocumentPositionParams {
+        let completions = hx_completion(TextDocumentPositionParams {
             text_document: TextDocumentIdentifier { uri: file_url },
             position: Position {
                 line: 0,
                 character: 16,
             },
-        });
+        })
+        .expect("completion must not be none");
 
-        let completions = completion.expect("completion is none");
         assert_eq!(
             completions
                 .into_iter()
