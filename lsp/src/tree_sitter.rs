@@ -53,8 +53,8 @@ fn create_attribute(node: Node<'_>, source: &str) -> Option<Position> {
                 todo!("should fix this issue");
             }
         }
+
         "fragment" | "element" => {
-            // The root nodes names
             let mut cursor = node.walk();
             for child in node.clone().children(&mut cursor) {
                 if let Some(result) = create_attribute(child, source) {
@@ -64,9 +64,10 @@ fn create_attribute(node: Node<'_>, source: &str) -> Option<Position> {
 
             return create_attribute(node.child(0)?, source);
         }
+
+        // Example of an ERROR node
+        // (ERROR (tag_name) (attribute_name))
         "ERROR" => {
-            // Example of an ERROR node
-            // (ERROR (tag_name) (attribute_name))
             let mut cursor = node.walk();
             for child in node.clone().children(&mut cursor) {
                 if let Some(attribute) = create_attribute(child, source) {
@@ -74,9 +75,11 @@ fn create_attribute(node: Node<'_>, source: &str) -> Option<Position> {
                 }
             }
         }
-        "self_closing_tag" => {
-            // Example of an self_closing_tag node
-            // (self_closing_tag (tag_name) (attribute (attribute_name)) (MISSING \"/>\"))
+
+        // Example of an self_closing_tag node
+        // (self_closing_tag (tag_name) (attribute (attribute_name)) (MISSING \"/>\"))
+        // (start_tag (tag_name) (attribute (attribute_name)) (MISSING \">\"))
+        "self_closing_tag" | "start_tag" => {
             let mut cursor = node.walk();
             for child in node.clone().children(&mut cursor) {
                 if child.kind() == "attribute" {
@@ -90,7 +93,6 @@ fn create_attribute(node: Node<'_>, source: &str) -> Option<Position> {
 }
 
 fn get_position(root: Node<'_>, source: &str, row: usize, column: usize) -> Option<Position> {
-    error!("get_position");
     let desc = root.descendant_for_point_range(Point { row, column }, Point { row, column })?;
 
     return create_attribute(desc, source);
