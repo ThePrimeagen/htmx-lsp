@@ -25,11 +25,13 @@ fn get_attribute_name_and_value(node: Node<'_>, source: &str) -> Option<Position
 }
 
 fn create_attribute(node: Node<'_>, source: &str) -> Option<Position> {
+    error!("create_attribute tree relation: {:?}", node.to_sexp());
+
     match node.kind() {
         "\"" => return create_attribute(node.parent()?, source),
         "=" => return create_attribute(node.parent()?, source),
         "attribute" => {
-            return None;
+            return create_attribute(node.child(0)?, source);
         }
 
         "attribute_name" => {
@@ -51,28 +53,52 @@ fn create_attribute(node: Node<'_>, source: &str) -> Option<Position> {
                 todo!("should fix this issue");
             }
         }
+        "fragment" | "element" => {
+            // The root nodes names
+            let mut cursor = node.walk();
+            for child in node.clone().children(&mut cursor) {
+                if let Some(result) = create_attribute(child, source) {
+                    return Some(result);
+                }
+            }
+
+            return create_attribute(node.child(0)?, source);
+        }
+        "ERROR" => {
+            // Example of an ERROR node
+            // (ERROR (tag_name) (attribute_name))
+            let mut cursor = node.walk();
+            for child in node.clone().children(&mut cursor) {
+                if let Some(attribute) = create_attribute(child, source) {
+                    return Some(attribute);
+                }
+            }
+        }
+        "self_closing_tag" => {
+            // Example of an self_closing_tag node
+            // (self_closing_tag (tag_name) (attribute (attribute_name)) (MISSING \"/>\"))
+            let mut cursor = node.walk();
+            for child in node.clone().children(&mut cursor) {
+                if child.kind() == "attribute" {
+                    return create_attribute(child.child(0 as usize)?, source);
+                }
+            }
+        }
         _ => {}
     };
-    return None
+    return None;
 }
 
 fn get_position(root: Node<'_>, source: &str, row: usize, column: usize) -> Option<Position> {
     error!("get_position");
+    let desc = root.descendant_for_point_range(Point { row, column }, Point { row, column })?;
 
-    let desc = root.descendant_for_point_range(
-        Point { row, column },
-        Point { row, column },
-    )?;
-
-    error!("get_position: desc {:?}", desc);
-
-    return create_attribute(desc, source)
+    return create_attribute(desc, source);
 }
 
 pub fn get_position_from_lsp_completion(
     text_params: TextDocumentPositionParams,
 ) -> Option<Position> {
-
     error!("get_position_from_lsp_completion");
     let text = get_text_document(text_params.text_document.uri)?;
     error!("get_position_from_lsp_completion: text {}", text);

@@ -111,6 +111,168 @@ pub fn init_hx_tags() {
             ("hx-vals", include_str!("./attributes/hx-vals.md")),
             ("hx-push-url", include_str!("./attributes/hx-push-url.md")),
             ("hx-select", include_str!("./attributes/hx-select.md")),
-        ])
-    );
+    ]));
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use crate::text_store::{get_text_document, init_text_store, TEXT_STORE};
+    use lsp_types::{Position, TextDocumentIdentifier, TextDocumentPositionParams, Url};
+    use std::sync::Once;
+
+    static BEFORE: Once = Once::new();
+    fn prepare_store() {
+        BEFORE.call_once(|| {
+            init_hx_tags();
+            init_text_store();
+        });
+
+        TEXT_STORE
+            .get()
+            .expect("text store not initialized")
+            .lock()
+            .expect("text store mutex poisoned")
+            .texts
+            .clear();
+
+        assert!(TEXT_STORE
+            .get()
+            .expect("text store not initialized")
+            .lock()
+            .expect("text store mutex poisoned")
+            .texts
+            .is_empty());
+    }
+
+    #[test]
+    fn test_it_presents_htmx_tags_after_hx_dash() {
+        prepare_store();
+
+        let file = "file:///test2.html";
+        let content = r#"<div hx- "#;
+        let file_url = Url::parse(file).unwrap();
+
+        TEXT_STORE
+            .get()
+            .expect("text store not initialized")
+            .lock()
+            .expect("text store mutex poisoned")
+            .texts
+            .insert(file.to_string(), content.to_string());
+
+        let completion = hx_completion(TextDocumentPositionParams {
+            text_document: TextDocumentIdentifier { uri: file_url },
+            position: Position {
+                line: 0,
+                character: 15,
+            },
+        });
+
+        let completions = completion.expect("completion is none");
+        assert_eq!(
+            completions
+                .into_iter()
+                .map(|c| c.name)
+                .collect::<Vec<String>>(),
+            vec![
+                "hx-boost",
+                "hx-delete",
+                "hx-get",
+                "hx-include",
+                "hx-patch",
+                "hx-post",
+                "hx-put",
+                "hx-swap",
+                "hx-target",
+                "hx-trigger",
+                "hx-vals",
+                "hx-push-url",
+                "hx-select"
+            ],
+        );
+    }
+
+    #[test]
+    fn test_it_presents_htmx_tags_after_hx_dash_when_eval_in_error() {
+        prepare_store();
+
+        let file = "file:///test3.html";
+        let content = r#"<div><div hx- </div>"#;
+        let file_url = Url::parse(file).unwrap();
+
+        TEXT_STORE
+            .get()
+            .expect("text store not initialized")
+            .lock()
+            .expect("text store mutex poisoned")
+            .texts
+            .insert(file.to_string(), content.to_string());
+
+        let completion = hx_completion(TextDocumentPositionParams {
+            text_document: TextDocumentIdentifier { uri: file_url },
+            position: Position {
+                line: 0,
+                character: 13,
+            },
+        });
+
+        let completions = completion.expect("completion is none");
+        assert_eq!(
+            completions
+                .into_iter()
+                .map(|c| c.name)
+                .collect::<Vec<String>>(),
+            vec![
+                "hx-boost",
+                "hx-delete",
+                "hx-get",
+                "hx-include",
+                "hx-patch",
+                "hx-post",
+                "hx-put",
+                "hx-swap",
+                "hx-target",
+                "hx-trigger",
+                "hx-vals",
+                "hx-push-url",
+                "hx-select"
+            ],
+        );
+    }
+
+    #[test]
+    fn test_it_presents_htmx_targets_after_first_quote() {
+        prepare_store();
+
+        let file = "file:///test1.html";
+        let content = r#"<div hx-target=" "#;
+        let file_url = Url::parse(file).unwrap();
+
+        TEXT_STORE
+            .get()
+            .expect("text store not initialized")
+            .lock()
+            .expect("text store mutex poisoned")
+            .texts
+            .insert(file.to_string(), content.to_string());
+
+        let completion = hx_completion(TextDocumentPositionParams {
+            text_document: TextDocumentIdentifier { uri: file_url },
+            position: Position {
+                line: 0,
+                character: 16,
+            },
+        });
+
+        let completions = completion.expect("completion is none");
+        assert_eq!(
+            completions
+                .into_iter()
+                .map(|c| c.name)
+                .collect::<Vec<String>>(),
+            vec!["closest", "find", "next", "prev", "this"],
+        );
+    }
 }
