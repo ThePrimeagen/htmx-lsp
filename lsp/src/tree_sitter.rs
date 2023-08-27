@@ -65,7 +65,7 @@ fn get_position_by_query(query: &str, node: Node<'_>, source: &str) -> Option<Po
 
     debug!("get_position_by_query node {:?}", node.to_sexp());
 
-    // TODO this only suggestion for matches at the end of the tag!
+    // FIXME this only covers suggestion for attributes at the end of the tag!
     let first_match = matches.last()?;
 
     let capture_names = query.capture_names();
@@ -135,12 +135,13 @@ fn query_position(root: Node<'_>, source: &str, row: usize, column: usize) -> Op
             (
               (_
                 (ERROR 
-                    (tag_name)
-                    (attribute_name) @attr_name
-                    (attribute_value)? @attr_value
+                  (tag_name)
+                  (attribute_name) @attr_name
+                  (attribute_value)? @attr_value
                 ) @incomplete_tag
               )
-                (#match? @attr_name "hx-.*=?")
+
+              (#match? @attr_name "hx-.*=?")
             )"#,
             node,
             source,
@@ -209,7 +210,7 @@ pub fn get_position_from_lsp_completion(
 #[cfg(test)]
 mod tests {
     use super::{get_position, query_position, Position};
-    use tree_sitter::{Parser, Point, Query, QueryCursor};
+    use tree_sitter::Parser;
 
     fn prepare_tree(text: &str) -> tree_sitter::Tree {
         let language = tree_sitter_html::language();
@@ -230,9 +231,9 @@ mod tests {
 
         let tree = prepare_tree(&text);
 
-        let matches = query_position(tree.root_node(), text, 0, 4);
+        let matches = query_position(tree.root_node(), text, 0, 8);
         // Fixes issue with not suggesting hx-* attributes
-        // let expected = get_position(tree.root_node(), text, 0, 4);
+        // let expected = get_position(tree.root_node(), text, 0, 8);
         // assert_eq!(matches, expected);
         assert_eq!(matches, Some(Position::AttributeName("hx-".to_string())));
     }
