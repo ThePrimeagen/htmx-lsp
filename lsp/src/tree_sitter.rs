@@ -61,24 +61,23 @@ fn get_position_by_query(query: &str, node: Node<'_>, source: &str) -> Option<Po
     let query = Query::new(tree_sitter_html::language(), query)
         .expect(&format!("get_position_by_query invalid query {query}"));
     let mut cursor = QueryCursor::new();
-    let mut matches = cursor.matches(&query, node, source.as_bytes());
+    let matches = cursor.matches(&query, node, source.as_bytes());
 
     debug!("get_position_by_query node {:?}", node.to_sexp());
 
-    let first_match = matches.next()?;
+    // TODO this only suggestion for matches at the end of the tag!
+    let first_match = matches.last()?;
 
-    if let Some(sm) = matches.next() {
-        // Anithing that isn't simple as suggest the last attribute being
-        // edited falls in here and needs to be implemented
-        error!("get_position_by_query: multiple attributes hx-* {:?} ", sm);
-        todo!("multiple attributes hx-* attributes are not supported yet");
-    }
+    let capture_names = query.capture_names();
+    debug!("get_position_by_query captures {:?}", capture_names);
+
+    debug!("get_position_by_query first_match {:?}", first_match);
 
     let props = first_match
         .captures
         .iter()
         .fold(HashMap::new(), |mut props, capture| {
-            let name = query.capture_names()[capture.index as usize].to_owned();
+            let name = capture_names[capture.index as usize].to_owned();
             let value = capture
                 .node
                 .utf8_text(source.as_bytes())
@@ -134,13 +133,13 @@ fn query_position(root: Node<'_>, source: &str, row: usize, column: usize) -> Op
         return get_position_by_query(
             r#"
             (
-                (_
-                    (ERROR 
-                        (tag_name)
-                        (attribute_name) @attr_name
-                        (attribute_value)? @attr_value
-                    ) @incomplete_tag
-                )
+              (_
+                (ERROR 
+                    (tag_name)
+                    (attribute_name) @attr_name
+                    (attribute_value)? @attr_value
+                ) @incomplete_tag
+              )
                 (#match? @attr_name "hx-.*=?")
             )"#,
             node,
@@ -151,18 +150,19 @@ fn query_position(root: Node<'_>, source: &str, row: usize, column: usize) -> Op
     // See: https://tree-sitter.github.io/tree-sitter/using-parsers#query-syntax
     return get_position_by_query(
         r#"(
-        (_
+          (_
             (_ 
-                (tag_name)
-                (attribute (attribute_name) @attr_name
-                    (quoted_attribute_value 
-                        (attribute_value)? @attr_value
-                    )? @quoted_attr_value
-                )
+              (tag_name)
+              (attribute
+                (attribute_name) @attr_name
+                (quoted_attribute_value 
+                  (attribute_value)? @attr_value
+                )? @quoted_attr_value
+              )
             ) @tag
-        )
+          )
 
-        (#match? @attr_name "hx-.*=?")
+          (#match? @attr_name "hx-.*=?")
         )"#,
         node,
         source,
@@ -326,5 +326,38 @@ mod tests {
         let matches = query_position(tree.root_node(), text, 1, 14);
 
         assert_eq!(matches, Some(Position::AttributeName("hx-".to_string())));
+    }
+
+    #[test]
+    fn test_it_matches_more_than_one_attribute() {
+        let text = r##"<div hx-get="/foo" hx-target="this" hx->
+    </div>
+    "##;
+
+        let tree = prepare_tree(&text);
+
+        let matches = query_position(tree.root_node(), text, 1, 39);
+
+        assert_eq!(matches, Some(Position::AttributeName("hx-".to_string())));
+    }
+
+    // skip - This test when suggesting an attribute in the middle of others
+    // #[test]
+    fn test_it_matches_more_than_one_attribute_when_suggesting_in_the_middle() {
+        let text = r##"<div hx-get="/foo" hx-target="" hx-swap="#swap">
+    </div>
+    "##;
+
+        let tree = prepare_tree(&text);
+
+        let matches = query_position(tree.root_node(), text, 1, 30);
+
+        assert_eq!(
+            matches,
+            Some(Position::AttributeValue {
+                name: "hx-target".to_string(),
+                value: "".to_string()
+            })
+        );
     }
 }
