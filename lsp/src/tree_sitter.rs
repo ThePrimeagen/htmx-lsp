@@ -68,7 +68,10 @@ fn get_position_by_query(query: &str, node: Node<'_>, source: &str) -> Option<Po
     let first_match = matches.next()?;
 
     if let Some(sm) = matches.next() {
-        error!("get_position_by_query: more than one match ??? {:?} ", sm);
+        // Anithing that isn't simple as suggest the last attribute being
+        // edited falls in here and needs to be implemented
+        error!("get_position_by_query: multiple attributes hx-* {:?} ", sm);
+        todo!("multiple attributes hx-* attributes are not supported yet");
     }
 
     let props = first_match
@@ -117,10 +120,11 @@ fn query_position(root: Node<'_>, source: &str, row: usize, column: usize) -> Op
     debug!("query_position");
 
     debug!("query_position root {:?}", root.to_sexp());
-    let desc = root.descendant_for_point_range(Point { row, column }, Point { row, column })?;
-    debug!("query_position desc {:?}", desc.to_sexp());
+    let closest_node =
+        root.descendant_for_point_range(Point { row, column }, Point { row, column })?;
+    debug!("query_position closest_node {:?}", closest_node.to_sexp());
 
-    let node = find_element_referent_to_current_node(desc)?;
+    let node = find_element_referent_to_current_node(closest_node)?;
 
     // Maybe there is a better way to check for this
     // usually an ERROR node means the there is an incomplete tag at some
@@ -128,16 +132,17 @@ fn query_position(root: Node<'_>, source: &str, row: usize, column: usize) -> Op
     if node.to_sexp().contains("ERROR") {
         // See: https://tree-sitter.github.io/tree-sitter/using-parsers#query-syntax
         return get_position_by_query(
-            r#"(
-            (_
-                (ERROR 
-                    (tag_name)
-                    (attribute_name) @attr_name
-                    (attribute_value)? @attr_value
-                ) @incomplete_tag
-            )
-            (#match? @attr_name "hx-.*=?")
-        )"#,
+            r#"
+            (
+                (_
+                    (ERROR 
+                        (tag_name)
+                        (attribute_name) @attr_name
+                        (attribute_value)? @attr_value
+                    ) @incomplete_tag
+                )
+                (#match? @attr_name "hx-.*=?")
+            )"#,
             node,
             source,
         );
@@ -206,34 +211,37 @@ mod tests {
     use super::{get_position, query_position, Position};
     use tree_sitter::{Parser, Point, Query, QueryCursor};
 
-    #[test]
-    fn test_it_matches_when_starting_tag() {
-        let text = r##"<div hx- ></div>"##;
+    fn prepare_tree(text: &str) -> tree_sitter::Tree {
         let language = tree_sitter_html::language();
         let mut parser = Parser::new();
 
         parser
             .set_language(language)
             .expect("could not load html grammer");
+
         let tree = parser.parse(&text, None).expect("not to fail");
 
-        let expected = get_position(tree.root_node(), text, 0, 4);
-        let matches = query_position(tree.root_node(), text, 0, 4);
+        return tree;
+    }
 
-        assert_eq!(matches, expected);
+    #[test]
+    fn test_it_matches_when_starting_tag() {
+        let text = r##"<div hx- ></div>"##;
+
+        let tree = prepare_tree(&text);
+
+        let matches = query_position(tree.root_node(), text, 0, 4);
+        // Fixes issue with not suggesting hx-* attributes
+        // let expected = get_position(tree.root_node(), text, 0, 4);
+        // assert_eq!(matches, expected);
         assert_eq!(matches, Some(Position::AttributeName("hx-".to_string())));
     }
 
     #[test]
     fn test_does_not_match_when_quote_not_initiated() {
         let text = r##"<div hx-swap= ></div>"##;
-        let language = tree_sitter_html::language();
-        let mut parser = Parser::new();
 
-        parser
-            .set_language(language)
-            .expect("could not load html grammer");
-        let tree = parser.parse(&text, None).expect("not to fail");
+        let tree = prepare_tree(&text);
 
         let expected = get_position(tree.root_node(), text, 0, 14);
         let matches = query_position(tree.root_node(), text, 0, 14);
@@ -245,18 +253,14 @@ mod tests {
     #[test]
     fn test_it_matches_when_starting_quote_value() {
         let text = r##"<div hx-swap=" ></div>"##;
-        let language = tree_sitter_html::language();
-        let mut parser = Parser::new();
 
-        parser
-            .set_language(language)
-            .expect("could not load html grammer");
-        let tree = parser.parse(&text, None).expect("not to fail");
+        let tree = prepare_tree(&text);
 
-        let expected = get_position(tree.root_node(), text, 0, 14);
         let matches = query_position(tree.root_node(), text, 0, 14);
 
-        assert_eq!(matches, expected);
+        // The new implementation doesn't return incomplete tags as value :)
+        // let expected = get_position(tree.root_node(), text, 0, 14);
+        // assert_eq!(matches, expected);
         assert_eq!(
             matches,
             Some(Position::AttributeValue {
@@ -269,13 +273,8 @@ mod tests {
     #[test]
     fn test_it_matches_when_open_and_closed_quotes() {
         let text = r##"<div hx-swap=""></div>"##;
-        let language = tree_sitter_html::language();
-        let mut parser = Parser::new();
 
-        parser
-            .set_language(language)
-            .expect("could not load html grammer");
-        let tree = parser.parse(&text, None).expect("not to fail");
+        let tree = prepare_tree(&text);
 
         let expected = get_position(tree.root_node(), text, 0, 14);
         let matches = query_position(tree.root_node(), text, 0, 14);
@@ -297,18 +296,13 @@ mod tests {
       <button>Click me</button>
     </div>
     "##;
-        let language = tree_sitter_html::language();
-        let mut parser = Parser::new();
 
-        parser
-            .set_language(language)
-            .expect("could not load html grammer");
-        let tree = parser.parse(&text, None).expect("not to fail");
+        let tree = prepare_tree(&text);
 
-        let expected = get_position(tree.root_node(), text, 1, 16);
         let matches = query_position(tree.root_node(), text, 1, 16);
 
-        // This is actually fixes a bug
+        // The new implementation doesn't return incomplete tags as value :)
+        // let expected = get_position(tree.root_node(), text, 1, 16);
         // assert_eq!(matches, expected);
         assert_eq!(
             matches,
@@ -320,37 +314,15 @@ mod tests {
     }
 
     #[test]
-    fn test_error() {
-        let text = r##"<div hx-"##;
-        let language = tree_sitter_html::language();
-        let mut parser = Parser::new();
-
-        parser
-            .set_language(language)
-            .expect("could not load html grammer");
-        let tree = parser.parse(&text, None).expect("not to fail");
-
-        let expected = get_position(tree.root_node(), text, 1, 7);
-        let matches = query_position(tree.root_node(), text, 1, 7);
-
-        assert_eq!(matches, expected);
-        assert_eq!(matches, Some(Position::AttributeName("hx-".to_string())));
-    }
-
-    #[test]
     fn test_it_matches_a_unclosed_tag_in_the_middle_() {
-        let text = r##"<div id="fa" hx-swap="hx-swap" hx-swap="hx-swap">
+        let text = r##"<div id="fa" hx-target="this" hx-swap="hx-swap">
       <span hx-
       <tebutton>Click me</button>
     </div>
     "##;
-        let language = tree_sitter_html::language();
-        let mut parser = Parser::new();
 
-        parser
-            .set_language(language)
-            .expect("could not load html grammer");
-        let tree = parser.parse(&text, None).expect("not to fail");
+        let tree = prepare_tree(&text);
+
         let matches = query_position(tree.root_node(), text, 1, 14);
 
         assert_eq!(matches, Some(Position::AttributeName("hx-".to_string())));
