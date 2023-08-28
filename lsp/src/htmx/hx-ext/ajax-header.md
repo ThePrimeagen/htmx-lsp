@@ -6,7 +6,7 @@ Install
 
 Usage
 <body hx-ext="ajax-header">
- ...
+    ...
 </body>
 
 

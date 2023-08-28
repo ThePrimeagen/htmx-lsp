@@ -14,18 +14,18 @@ Usage
 </header>
 
 <body>
-  <div hx-target="this" hx-ext="alpine-morph" hx-swap="morph">
-      <div x-data="{ count: 0, replaced: false,
+    <div hx-target="this" hx-ext="alpine-morph" hx-swap="morph">
+        <div x-data="{ count: 0, replaced: false,
                      message: 'Change me, then press the button!' }">
-          <input type="text" x-model="message">
-          <div x-text="count"></div>
-          <button x-bind:style="replaced && {'backgroundColor': '#fecaca'}"
+            <input type="text" x-model="message">
+            <div x-text="count"></div>
+            <button x-bind:style="replaced && {'backgroundColor': '#fecaca'}"
                   x-on:click="replaced = true; count++"
                   hx-get="/swap">
             Morph
-          </button>
-      </div>
-  </div>
+            </button>
+        </div>
+    </div>
 </body>
 
 In the above example, all the Alpine x-data states (count, replaced, and message) are preserved even the entire Alpine component is swapped.

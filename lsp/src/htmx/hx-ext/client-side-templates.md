@@ -17,18 +17,18 @@ Install
 
 Usage
 <div hx-ext="client-side-templates">
-  <button hx-get="/some_json"
+    <button hx-get="/some_json"
           mustache-template="my-mustache-template">
      Handle with mustache
-  </button>
-  <button hx-get="/some_json"
+    </button>
+    <button hx-get="/some_json"
           handlebars-template="my-handlebars-template">
      Handle with handlebars
-  </button>
-  <button hx-get="/some_json"
+    </button>
+    <button hx-get="/some_json"
           nunjucks-template="my-nunjucks-template">
      Handle with nunjucks
-  </button>
+    </button>
 </div>
 
 Full HTML Example

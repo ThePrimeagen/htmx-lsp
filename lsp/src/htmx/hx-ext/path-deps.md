@@ -17,11 +17,11 @@ Install
 
 Usage
 <div hx-ext='path-deps'>
-  <ul hx-get="/list" hx-trigger="path-deps" path-deps="/list">
-  </ul>
-  <button hx-post="/list">
-     Post To List
-  </button>
+    <ul hx-get="/list" hx-trigger="path-deps" path-deps="/list">
+    </ul>
+    <button hx-post="/list">
+        Post To List
+    </button>
 </div>
 
 Javascript API

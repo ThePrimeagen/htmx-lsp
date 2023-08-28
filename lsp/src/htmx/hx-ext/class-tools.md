@@ -10,7 +10,6 @@ Install
 <script src="https://unpkg.com/htmx.org/dist/ext/class-tools.js"></script>
 
 Usage
-
 <div hx-ext="class-tools">
     <div classes="add foo"/> <!-- adds the class "foo" after 100ms -->
     <div class="bar" classes="remove bar:1s"/> <!-- removes the class "bar" after 1s -->

@@ -66,11 +66,11 @@ When a connection for server sent events has been established, child elements ca
 
 Here is an example:
 
-  <div hx-ext="sse" sse-connect="/event_stream">
+<div hx-ext="sse" sse-connect="/event_stream">
     <div hx-get="/chatroom" hx-trigger="sse:chatter">
-      ...
+        ...
     </div>
-  </div>
+</div>
 
 This example establishes an SSE connection to the event_stream end point which then triggers a GET to the /chatroom url whenever the chatter event is seen.
 
