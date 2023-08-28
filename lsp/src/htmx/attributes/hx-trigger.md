@@ -94,3 +94,5 @@ The AJAX request can be triggered via JavaScript htmx.trigger(), too.
 Notes
 hx-trigger is not inherited
 hx-trigger can be used without an AJAX request, in which case it will only fire the htmx:trigger event
+
+[HTMX Reference](https://htmx.org/attributes/hx-trigger/)

@@ -14,3 +14,4 @@ You can control the swap strategy by using the hx-swap attribute
 You can control what event triggers the request with the hx-trigger attribute
 You can control the data submitted with the request in various ways, documented here: Parameters
 
+[HTMX Reference](https://htmx.org/attributes/hx-put/)

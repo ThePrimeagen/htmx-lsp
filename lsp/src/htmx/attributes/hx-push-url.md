@@ -29,3 +29,4 @@ Notes
     The HX-Push-Url response header has similar behavior and can override this attribute.
     The hx-history-elt attribute allows changing which element is saved in the history cache.
 
+[HTMX Reference](https://htmx.org/attributes/hx-push-url/)

@@ -14,3 +14,5 @@ You can control the swap strategy by using the hx-swap attribute
 You can control what event triggers the request with the hx-trigger attribute
 You can control the data submitted with the request in various ways, documented here: Parameters
 To remove the element following a successful DELETE, return a 200 status code with an empty body; if the server responds with a 204, no swap takes place, documented here: Requests & Responses
+
+[HTMX Reference](https://htmx.org/attributes/hx-delete/)
