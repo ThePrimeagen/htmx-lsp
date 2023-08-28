@@ -71,11 +71,6 @@ fn to_hx_completion(values: Vec<(&str, &str)>) -> Vec<HxCompletion> {
 pub fn init_hx_tags() {
     _ = HX_ATTRIBUTE_VALUES.set(
         maplit::hashmap!{
-            String::from("hx-boost") => to_hx_completion(vec![
-                ("true", ""),
-                ("false", ""),
-            ]),
-
             String::from("hx-swap") => to_hx_completion(vec![
                 ("innerHTML", include_str!("./hx-swap/innerHTML.md")),
                 ("outerHTML", include_str!("./hx-swap/outerHTML.md")),
