@@ -39,30 +39,30 @@ If you wish to put a template into another file, you can use a directive such as
 
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width">
-  <title>JS Bin</title>
-  <script src="https://unpkg.com/htmx.org"></script>
-  <script src="https://unpkg.com/htmx.org/dist/ext/client-side-templates.js"></script>
-  <script src="https://unpkg.com/mustache@latest"></script>
-</head>
-<body>
-  <div hx-ext="client-side-templates">
-    <button hx-get="https://jsonplaceholder.typicode.com/todos/1"
-            hx-swap="innerHTML"
-            hx-target="#content"
-            mustache-template="foo">
-      Click Me
-    </button>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>JS Bin</title>
+    <script src="https://unpkg.com/htmx.org"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/client-side-templates.js"></script>
+    <script src="https://unpkg.com/mustache@latest"></script>
+  </head>
+  <body>
+    <div hx-ext="client-side-templates">
+      <button hx-get="https://jsonplaceholder.typicode.com/todos/1"
+              hx-swap="innerHTML"
+              hx-target="#content"
+              mustache-template="foo">
+        Click Me
+      </button>
 
-    <p id="content">Start</p>
+      <p id="content">Start</p>
 
-    <template id="foo">
-      <p> {% raw %}{{userID}}{% endraw %} and {% raw %}{{id}}{% endraw %} and {% raw %}{{title}}{% endraw %} and {% raw %}{{completed}}{% endraw %}</p>
-    </template>
-  </div>
-</body>
+      <template id="foo">
+        <p> {% raw %}{{userID}}{% endraw %} and {% raw %}{{id}}{% endraw %} and {% raw %}{{title}}{% endraw %} and {% raw %}{{completed}}{% endraw %}</p>
+      </template>
+    </div>
+  </body>
 </html>
 
 [HTMX Reference](https://htmx.org/extensions/client-side-templates/)
