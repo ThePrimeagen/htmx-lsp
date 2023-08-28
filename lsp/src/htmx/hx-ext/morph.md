@@ -27,4 +27,4 @@ Usage
 
 </div>
 
-[HTMX Reference](https://github.com/bigskysoftware/idiomorph)
+[Idiomorph Reference](https://github.com/bigskysoftware/idiomorph)

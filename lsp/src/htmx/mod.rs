@@ -159,6 +159,23 @@ pub fn init_hx_tags() {
             ("hx-push-url", include_str!("./attributes/hx-push-url.md")),
             ("hx-select", include_str!("./attributes/hx-select.md")),
             ("hx-ext", include_str!("./attributes/hx-ext.md")),
+            ("hx-on", include_str!("./attributes/hx-on.md")),
+            ("hx-select-oob", include_str!("./attributes/hx-select-oob.md")),
+            ("hx-swap-oob", include_str!("./attributes/hx-swap-oob.md")),
+            ("hx-confirm", include_str!("./attributes/hx-confirm.md")),
+            ("hx-disable", include_str!("./attributes/hx-disable.md")),
+            ("hx-encoding", include_str!("./attributes/hx-encoding.md")),
+            ("hx-headers", include_str!("./attributes/hx-headers.md")),
+            ("hx-history", include_str!("./attributes/hx-history.md")),
+            ("hx-history-elt", include_str!("./attributes/hx-history-elt.md")),
+            ("hx-indicator", include_str!("./attributes/hx-indicator.md")),
+            ("hx-params", include_str!("./attributes/hx-params.md")),
+            ("hx-preserve", include_str!("./attributes/hx-preserve.md")),
+            ("hx-prompt", include_str!("./attributes/hx-prompt.md")),
+            ("hx-replace-url", include_str!("./attributes/hx-replace-url.md")),
+            ("hx-request", include_str!("./attributes/hx-request.md")),
+            ("hx-sync", include_str!("./attributes/hx-sync.md")),
+            ("hx-validate", include_str!("./attributes/hx-validate.md")),
         ])
     );
 }
