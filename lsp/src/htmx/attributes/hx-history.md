@@ -5,11 +5,11 @@ History navigation will work as expected, but on restoration the URL will be req
 Here is an example:
 
 <html>
-<body>
-<div hx-history="false">
- ...
-</div>
-</body>
+  <body>
+    <div hx-history="false">
+     ...
+    </div>
+  </body>
 </html>
 
 Notes
