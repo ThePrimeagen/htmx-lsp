@@ -1,0 +1,21 @@
+name: "Setup Rust Environment"
+
+description: "Setup the Rust CI environment for GitHub Action runners"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Rust toolchain
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: stable
+        targets: >
+          x86_64-unknown-linux-gnu,
+          x86_64-pc-windows-msvc,
+          aarch64-pc-windows-msvc,
+          x86_64-apple-darwin,
+          aarch64-apple-darwin
+        components: rustfmt, clippy
+
+    - name: Setup rust cache
+      uses: Swatinem/rust-cache@v2

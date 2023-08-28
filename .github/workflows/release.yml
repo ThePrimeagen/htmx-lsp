@@ -1,0 +1,119 @@
+name: Build & Release
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build
+    runs-on: ${{ matrix.build.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build:
+          - {
+              NAME: linux-x64,
+              OS: ubuntu-22.04,
+              TARGET: x86_64-unknown-linux-gnu,
+            }
+          - {
+              NAME: windows-x64,
+              OS: windows-2022,
+              TARGET: x86_64-pc-windows-msvc,
+            }
+          - {
+              NAME: windows-arm64,
+              OS: windows-2022,
+              TARGET: aarch64-pc-windows-msvc,
+            }
+          - {
+              NAME: darwin-x64,
+              OS: macos-12,
+              TARGET: x86_64-apple-darwin,
+            }
+          - {
+              NAME: darwin-arm64,
+              OS: macos-12,
+              TARGET: aarch64-apple-darwin,
+            }
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Rust env
+        uses: "./.github/actions/setup-rust-env"
+
+      - name: Build
+        run: cargo build --release --locked --target ${{ matrix.build.TARGET }}
+
+      - name: Rename htmx-lsp binary
+        shell: bash
+        run: |
+          binary_name="htmx-lsp"
+
+          extension=""
+          # windows binaries have ".exe" extension
+          if [[ "${{ matrix.build.OS }}" == *"windows"* ]]; then
+            extension=".exe"
+          fi
+
+          mkdir bin
+          cp "target/${{ matrix.build.TARGET }}/release/${binary_name}" "bin/${binary_name}-${{ matrix.build.NAME }}${extension}"
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: built-binaries
+          path: bin/*
+
+  release:
+    name: Release
+    runs-on: ubuntu-22.04
+    needs: build
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+
+      - name: Download binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: built-binaries
+          path: bin
+
+      - name: Check if release should be created
+        shell: bash
+        run: |
+          RELEASE_VERSION=$(awk -F ' = ' '$1 ~ /version/ { gsub(/["]/, "", $2); printf("%s",$2) }' Cargo.toml)
+          OLD_VERSION=$(awk -F ' = ' '$1 ~ /version/ { gsub(/["]/, "", $2); printf("%s",$2) }' <<< "$(git show HEAD~1:Cargo.toml)")
+
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
+
+
+          echo "$OLD_VERSION -> $RELEASE_VERSION"
+
+          if [[ "$RELEASE_VERSION" == "$OLD_VERSION" ]]; then
+            echo "SHOULD_RELEASE=no" >> $GITHUB_ENV
+          else
+            git tag "$RELEASE_VERSION"
+            git push -u origin "$RELEASE_VERSION"
+            echo "SHOULD_RELEASE=yes" >> $GITHUB_ENV
+          fi
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v1
+        if: env.SHOULD_RELEASE == 'yes'
+        with:
+          files: bin/*
+          tag_name: ${{ env.RELEASE_VERSION }}
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
