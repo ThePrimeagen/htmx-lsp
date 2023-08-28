@@ -66,3 +66,4 @@ htmx.config.wsReconnectDelay = function (retryCount) {
 
 The extension also implements a simple queuing mechanism that keeps messages in memory when the socket is not in OPEN state and sends them once the connection is restored.
 
+[HTMX Reference](https://htmx.org/extensions/web-sockets/)

@@ -10,3 +10,4 @@ Usage
 </button>
 </body>
 
+[HTMX Reference](https://htmx.org/extensions/method-override/)

@@ -26,3 +26,5 @@ Usage
     </button>
 
 </div>
+
+[HTMX Reference](https://github.com/bigskysoftware/idiomorph)

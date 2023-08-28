@@ -9,3 +9,5 @@ Usage
 </button>
 Sends something like this:
 Triggering-Event: '{ "isTrusted": false, "htmx-internal-data": { "handled": true }, "screenX": 0
+
+[HTMX Reference](https://htmx.org/extensions/event-header/)

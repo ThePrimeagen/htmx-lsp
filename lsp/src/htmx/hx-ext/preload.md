@@ -81,3 +81,5 @@ Limitations
 Credits
 
 The behavior for this plugin was inspired by the work done by Alexandre Dieulot on InstantClick, which is released under the MIT license.
+
+[HTMX Reference](https://htmx.org/extensions/preload/)

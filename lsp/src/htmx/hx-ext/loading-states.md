@@ -106,4 +106,4 @@ This attribute is optional and it allows defining a scope for the loading states
   <div data-loading>loading</div>
 </form>
 
-
+[HTMX Reference](https://htmx.org/extensions/loading-states/)

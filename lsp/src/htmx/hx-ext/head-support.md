@@ -88,3 +88,4 @@ This extension triggers the following events:
         removed - removed head elements
     htmx:beforeHeadMerge - triggered before a head merge occurs
 
+[HTMX Reference](https://htmx.org/extensions/head-support/)

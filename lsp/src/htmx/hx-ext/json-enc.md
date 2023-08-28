@@ -5,3 +5,5 @@ Install
 
 Usage
 <div hx-post='/test' hx-ext='json-enc'>click me</div>
+
+[HTMX Reference](https://htmx.org/extensions/json-enc/)

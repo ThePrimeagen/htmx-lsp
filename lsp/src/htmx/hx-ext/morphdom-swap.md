@@ -12,3 +12,4 @@ Usage
    <button hx-swap="morphdom">This button will be swapped with morphdom!</button>
 </body>
 
+[HTMX Reference](https://htmx.org/extensions/morphdom-swap/)

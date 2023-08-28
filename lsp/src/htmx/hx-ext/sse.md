@@ -82,4 +82,4 @@ Testing SSE Connections with the Demo Server
 
 Htmx includes a demo SSE server written in Go that will help you to see SSE in action, and begin bootstrapping your own SSE code. It is located in the /test/servers/sse folder of the htmx distribution. Look at /test/servers/ws/README.md for instructions on running and using the test server.
 
-
+[HTMX Reference](https://htmx.org/extensions/server-sent-events/)

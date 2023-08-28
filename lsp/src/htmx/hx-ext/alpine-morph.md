@@ -31,3 +31,6 @@ Usage
 In the above example, all the Alpine x-data states (count, replaced, and message) are preserved even the entire Alpine component is swapped.
 
 NOTE: /swap response from the example above should return actual element that is being replaced (this is <div hx-target="this"... element).
+
+
+[HTMX Reference](https://htmx.org/extensions/alpine-morph/)

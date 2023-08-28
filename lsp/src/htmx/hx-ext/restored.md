@@ -10,3 +10,5 @@ A page utilizing hx-boost that will reload the h1 each time the back button is p
     <h1 hx-ext="restored" hx-trigger="restored" hx-get="/header">Come back!</h1>
     <a href="/other_page">I'll be back</a>
 </body>
+
+[HTMX Reference](https://htmx.org/extensions/restored/)

@@ -21,3 +21,5 @@ Usage
     <div classes="toggle foo:1s"/> <!-- toggles the class "foo" every 1s -->
 </div>
 
+
+[HTMX Reference](https://htmx.org/extensions/class-tools/)

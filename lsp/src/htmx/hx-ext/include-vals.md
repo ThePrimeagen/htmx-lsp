@@ -9,3 +9,5 @@ Usage
       Will Include Additional Values
     </div>
 </div>
+
+[HTMX Reference](https://htmx.org/extensions/include-vals/)

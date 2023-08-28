@@ -11,3 +11,4 @@ Disabling another element
 <button hx-get="/whatever" hx-ext="disable-element" hx-disable-element="#to-disable">Click me</button>
 <button id="to-disable">Watch me being disabled</button>
 
+[HTMX Reference](https://htmx.org/extensions/disable-element/)

@@ -65,3 +65,4 @@ If you wish to put a template into another file, you can use a directive such as
 </body>
 </html>
 
+[HTMX Reference](https://htmx.org/extensions/client-side-templates/)

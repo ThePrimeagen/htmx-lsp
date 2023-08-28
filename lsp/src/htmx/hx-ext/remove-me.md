@@ -8,3 +8,5 @@ Usage
     <!-- Removes this div after 1 second -->
     <div remove-me="1s">To Be Removed...</div>
 </div>
+
+[HTMX Reference](https://htmx.org/extensions/remove-me/)

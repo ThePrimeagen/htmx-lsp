@@ -61,3 +61,4 @@ Configure (optional)
 * isError flag on the detail member of an event associated with swapping the content with hx-target-[CODE] will be set to false when error response code is received. This is different from the default behavior. You may change this by setting a configuration flag htmx.config.responseTargetUnsetsError to false (default is true).
 * isError flag on the detail member of an event associated with swapping the content with hx-target-[CODE] will be set to false when non-erroneous response code is received. This is no different from the default behavior. You may change this by setting a configuration flag htmx.config.responseTargetSetsError to true (default is false). This setting will not affect the response code 200 since it is not handled by this extension.
 
+[HTMX Reference](https://htmx.org/extensions/response-targets/)

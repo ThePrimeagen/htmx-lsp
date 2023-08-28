@@ -8,3 +8,6 @@ Usage
 <body hx-ext="ajax-header">
  ...
 </body>
+
+
+[HTMX Reference](https://htmx.org/extensions/ajax-header/)

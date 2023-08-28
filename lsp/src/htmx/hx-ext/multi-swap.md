@@ -56,3 +56,4 @@ Notes and limitations
     If the delete swap method is used, the HTML response must also contain deleted element (it can be empty div with id attribute).
     Only elements with an id selector are supported, as the function internally uses OOB internal method. So it is not possible to use class or any other selectors.
 
+[HTMX Reference](https://htmx.org/extensions/multi-swap/)

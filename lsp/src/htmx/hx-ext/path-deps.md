@@ -37,3 +37,4 @@ Example
   // Trigger a refresh on all elements with the path-deps attribute '/path/to/refresh', including elements with a parent path, e.g. '/path'
   PathDeps.refresh('/path/to/refresh');
 
+[HTMX Reference](https://htmx.org/extensions/path-deps/)

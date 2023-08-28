@@ -6,3 +6,4 @@ Install
 Usage
 <button hx-ext="debug">Debug Me...</button>
 
+[HTMX Reference](https://htmx.org/extensions/debug/)
