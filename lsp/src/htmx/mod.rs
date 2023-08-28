@@ -1,13 +1,19 @@
-use log::error;
+use log::{debug, error};
 use lsp_types::TextDocumentPositionParams;
 use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, sync::OnceLock, collections::HashMap};
+use std::{collections::HashMap, path::PathBuf, sync::OnceLock};
 use util::get_text_byte_offset;
 
 use crate::tree_sitter::Position;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HxCompletion {
+    pub name: String,
+    pub desc: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct HxHover {
     pub name: String,
     pub desc: String,
 }
@@ -37,7 +43,6 @@ impl TryFrom<&(PathBuf, String)> for HxCompletion {
 }
 
 pub fn hx_completion(text_params: TextDocumentPositionParams) -> Option<Vec<HxCompletion>> {
-
     let result = crate::tree_sitter::get_position_from_lsp_completion(text_params.clone())?;
 
     error!("result: {:?} params: {:?}", result, text_params);
@@ -47,15 +52,36 @@ pub fn hx_completion(text_params: TextDocumentPositionParams) -> Option<Vec<HxCo
             if name.starts_with("hx-") {
                 return HX_TAGS.get().cloned();
             }
-        },
+        }
 
         Position::AttributeValue { name, .. } => {
             let values = HX_ATTRIBUTE_VALUES.get()?.get(&name)?;
             return Some(values.clone());
-        },
+        }
     };
 
     return None;
+}
+
+pub fn hx_hover(text_params: TextDocumentPositionParams) -> Option<HxCompletion> {
+    let result = crate::tree_sitter::get_position_from_lsp_completion(text_params.clone())?;
+    debug!("handle_hover result: {:?}", result);
+
+    match result {
+        Position::AttributeName(name) => HX_TAGS
+            .get()
+            .expect("Why it can't get HX_TAGS?")
+            .into_iter()
+            .find(|x| x.name == name)
+            .cloned(),
+
+        Position::AttributeValue { name, .. } => HX_TAGS
+            .get()
+            .expect("Why it can't get HX_TAGS?")
+            .into_iter()
+            .find(|x| x.name == name)
+            .cloned(),
+    }
 }
 
 pub static HX_TAGS: OnceLock<Vec<HxCompletion>> = OnceLock::new();

@@ -1,22 +1,23 @@
-mod tree_sitter;
 mod handle;
-mod text_store;
 mod htmx;
+mod text_store;
+mod tree_sitter;
 
 use anyhow::Result;
 use htmx::HxCompletion;
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use lsp_types::{
-    CompletionItem, CompletionItemKind, CompletionList, InitializeParams, ServerCapabilities,
-    TextDocumentSyncCapability, TextDocumentSyncKind, WorkDoneProgressOptions,
+    CompletionItem, CompletionItemKind, CompletionList, HoverContents, HoverParams,
+    InitializeParams, LanguageString, MarkedString, ServerCapabilities, TextDocumentSyncCapability,
+    TextDocumentSyncKind, WorkDoneProgressOptions,
 };
 
 use lsp_server::{Connection, Message, Response};
 
 use crate::{
     handle::{handle_notification, handle_other, handle_request, HtmxResult},
-    text_store::init_text_store,
     htmx::init_hx_tags,
+    text_store::init_text_store,
 };
 
 fn to_completion_list(items: Vec<HxCompletion>) -> CompletionList {
@@ -77,9 +78,34 @@ fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
                     error: None,
                 }))
             }
+
+            Some(HtmxResult::AttributeHover(hover_resp)) => {
+                debug!("main_loop - hover response: {:?}", hover_resp);
+                let hover_response = lsp_types::Hover {
+                    contents: HoverContents::Scalar(MarkedString::LanguageString(LanguageString {
+                        language: "html".to_string(),
+                        value: hover_resp.value.clone(),
+                    })),
+                    range: None,
+                };
+
+                let str = match serde_json::to_value(&hover_response) {
+                    Ok(s) => s,
+                    Err(err) => {
+                        error!("Fail to parse hover_response: {:?}", err);
+                        return Err(anyhow::anyhow!("Fail to parse hover_response"));
+                    }
+                };
+
+                connection.sender.send(Message::Response(Response {
+                    id: hover_resp.id,
+                    result: Some(str),
+                    error: None,
+                }))
+            }
             None => continue,
         } {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(e) => error!("failed to send response: {:?}", e),
         };
     }
@@ -114,6 +140,9 @@ pub fn start_lsp() -> Result<()> {
             all_commit_characters: None,
             completion_item: None,
         }),
+
+        hover_provider: Some(lsp_types::HoverProviderCapability::Simple(true)),
+
         ..Default::default()
     })
     .unwrap();
