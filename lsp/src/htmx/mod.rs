@@ -135,6 +135,45 @@ pub fn init_hx_tags() {
                 ("restored", include_str!("./hx-ext/restored.md")),
                 ("sse", include_str!("./hx-ext/sse.md")),
                 ("ws", include_str!("./hx-ext/ws.md")),
+            ]),
+
+            String::from("hx-push-url") => to_hx_completion(vec![
+                ("true", include_str!("./hx-push-url/true.md")),
+                ("false", include_str!("./hx-push-url/false.md")),
+            ]),
+
+            String::from("hx-swap-oob") => to_hx_completion(vec![
+                ("true", include_str!("./hx-swap-oob/true.md")),
+                ("innerHTML", include_str!("./hx-swap/innerHTML.md")),
+                ("outerHTML", include_str!("./hx-swap/outerHTML.md")),
+                ("afterbegin", include_str!("./hx-swap/afterbegin.md")),
+                ("afterend", include_str!("./hx-swap/afterend.md")),
+                ("beforebegin", include_str!("./hx-swap/beforebegin.md")),
+                ("beforeend", include_str!("./hx-swap/beforeend.md")),
+                ("delete", include_str!("./hx-swap/delete.md")),
+                ("none", include_str!("./hx-swap/none.md")),
+            ]),
+
+            String::from("hx-history") => to_hx_completion(vec![
+                ("false", include_str!("./hx-history/false.md")),
+            ]),
+
+            String::from("hx-params") => to_hx_completion(vec![
+                ("*", include_str!("./hx-params/star.md")),
+                ("none", include_str!("./hx-params/none.md")),
+                ("not", include_str!("./hx-params/not.md")),
+            ]),
+
+            String::from("hx-replace-url") => to_hx_completion(vec![
+                ("true", include_str!("./hx-replace-url/true.md")),
+                ("false", include_str!("./hx-replace-url/false.md")),
+            ]),
+
+            String::from("hx-sync") => to_hx_completion(vec![
+                ("drop", include_str!("./hx-sync/drop.md")),
+                ("abort", include_str!("./hx-sync/abort.md")),
+                ("replace", include_str!("./hx-sync/replace.md")),
+                ("queue", include_str!("./hx-sync/queue.md")),
             ])
         });
 
