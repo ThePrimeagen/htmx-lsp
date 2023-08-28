@@ -17,3 +17,4 @@ Notes
 
 
 
+[HTMX Reference](https://htmx.org/attributes/hx-select/)

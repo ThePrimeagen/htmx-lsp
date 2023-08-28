@@ -17,3 +17,5 @@ Note that if you include a non-input element, all input elements enclosed in tha
 Notes
 hx-include is inherited and can be placed on a parent element
 
+[HTMX Reference](https://htmx.org/attributes/hx-include/)
+

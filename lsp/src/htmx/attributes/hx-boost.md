@@ -28,3 +28,4 @@ All requests are done via AJAX, so keep that in mind when doing things like redi
 To find out if the request results from a boosted anchor or form, look for HX-Boosted in the request header
 Selectively disable boost on child elements with hx-boost="false"
 
+[HTMX Reference](https://htmx.org/attributes/hx-boost/)

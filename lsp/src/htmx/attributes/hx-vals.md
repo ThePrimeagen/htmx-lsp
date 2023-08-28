@@ -20,3 +20,5 @@ Notes
 hx-vals is inherited and can be placed on a parent element.
 A child declaration of a variable overrides a parent declaration.
 Input values with the same name will be overridden by variable declarations.
+
+[HTMX Reference](https://htmx.org/attributes/hx-vals/)

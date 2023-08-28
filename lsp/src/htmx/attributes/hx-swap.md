@@ -84,3 +84,4 @@ Due to DOM limitations, it’s not possible to use the outerHTML method on the <
 The default swap delay is 0ms
 The default settle delay is 20ms
 
+[HTMX Reference](https://htmx.org/attributes/hx-swap/)
