@@ -9,3 +9,6 @@ The extended CSS selector here allows for the following non-standard CSS values:
 * `window` - listen for events on the window
 * `closest <CSS selector>` - finds the closest ancestor element or itself, matching the given css selector
 * `find <CSS selector>` - finds the closest child matching the given css selector
+
+
+[HTMX Reference](https://htmx.org/attributes/hx-trigger/)

@@ -6,3 +6,5 @@ queue:<queue option> - determines how events are queued if an event occurs while
 * none - do not queue new events
 
 
+
+[HTMX Reference](https://htmx.org/attributes/hx-trigger/)
