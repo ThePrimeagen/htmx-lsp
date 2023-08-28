@@ -3,11 +3,11 @@ The hx-history-elt attribute allows you to specify the element that will be used
 Here is an example:
 
 <html>
-<body>
-<div id="content" hx-history-elt>
- ...
-</div>
-</body>
+  <body>
+    <div id="content" hx-history-elt>
+     ...
+    </div>
+  </body>
 </html>
 
 Notes
