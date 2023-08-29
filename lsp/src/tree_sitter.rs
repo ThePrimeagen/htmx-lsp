@@ -57,50 +57,58 @@ fn create_attribute(node: Node<'_>, source: &str) -> Option<Position> {
     return None;
 }
 
-fn get_position_by_query(query: &str, node: Node<'_>, source: &str) -> Option<Position> {
+fn get_position_by_query(
+    query: &str,
+    node: Node<'_>,
+    source: &str,
+    trigger_point: Point,
+) -> Option<Position> {
+    // See: https://tree-sitter.github.io/tree-sitter/using-parsers#query-syntax
     let query = Query::new(tree_sitter_html::language(), query)
         .expect(&format!("get_position_by_query invalid query {query}"));
-    let mut cursor = QueryCursor::new();
-    let matches = cursor.matches(&query, node, source.as_bytes());
+    let mut cursor_qry = QueryCursor::new();
+    let matches = cursor_qry.matches(&query, node, source.as_bytes());
 
     debug!("get_position_by_query node {:?}", node.to_sexp());
 
-    // FIXME this only covers suggestion for attributes at the end of the tag!
-    let first_match = matches.last()?;
-
     let capture_names = query.capture_names();
-    debug!("get_position_by_query captures {:?}", capture_names);
+    debug!("capture_names: {:?}", capture_names);
 
-    debug!("get_position_by_query first_match {:?}", first_match);
-
-    let props = first_match
-        .captures
-        .iter()
-        .fold(HashMap::new(), |mut props, capture| {
-            let name = capture_names[capture.index as usize].to_owned();
-            let value = capture
-                .node
-                .utf8_text(source.as_bytes())
-                .expect(&format!("failed to parse capture value for '{name}'"))
-                .to_owned();
-
-            props.insert(name, value);
+    let props = matches
+        .into_iter()
+        .fold(HashMap::new(), |mut props, match_| {
+            match_
+                .captures
+                .iter()
+                .filter(|capture| capture.node.start_position() <= trigger_point)
+                .for_each(|capture| {
+                    let name = capture_names[capture.index as usize].to_owned();
+                    let value = capture
+                        .node
+                        .utf8_text(source.as_bytes())
+                        .expect(&format!("failed to parse capture value for '{name}'"))
+                        .to_owned();
+                    props.insert(name, value);
+                });
 
             props
         });
 
+    debug!("props: {:?}", props);
+
     let name = props.get("attr_name")?.to_owned();
 
-    let attr_value = match props.get("attr_value").or(props.get("quoted_attr_value")) {
+    let attr_value = match props.get("quoted_attr_value").or(props.get("attr_value")) {
         Some(value) => Some(value.to_owned()),
         None => {
             return Some(Position::AttributeName(name.to_owned()));
         }
     };
 
-    let value = match props.get("incomplete_tag") {
-        Some(_) => "".to_owned(), // otherwise it gets other tags as string
-        None => attr_value.expect("at this point value must be present"),
+    let value = if capture_names.contains(&"incomplete_tag".to_owned()) || attr_value.is_none() {
+        "".to_owned()
+    } else {
+        attr_value?
     };
 
     return Some(Position::AttributeValue { name, value });
@@ -115,12 +123,11 @@ fn find_element_referent_to_current_node(node: Node<'_>) -> Option<Node<'_>> {
     return find_element_referent_to_current_node(node.parent()?);
 }
 
-fn query_position(root: Node<'_>, source: &str, row: usize, column: usize) -> Option<Position> {
+fn query_position(root: Node<'_>, source: &str, trigger_point: Point) -> Option<Position> {
     debug!("query_position");
 
     debug!("query_position root {:?}", root.to_sexp());
-    let closest_node =
-        root.descendant_for_point_range(Point { row, column }, Point { row, column })?;
+    let closest_node = root.descendant_for_point_range(trigger_point, trigger_point)?;
     debug!("query_position closest_node {:?}", closest_node.to_sexp());
 
     let node = find_element_referent_to_current_node(closest_node)?;
@@ -129,44 +136,89 @@ fn query_position(root: Node<'_>, source: &str, row: usize, column: usize) -> Op
     // usually an ERROR node means the there is an incomplete tag at some
     // point in the tree
     if node.to_sexp().contains("ERROR") {
-        // See: https://tree-sitter.github.io/tree-sitter/using-parsers#query-syntax
+        // This is for cases where there is an unclosed quote or if there is
+        // a mismatch in number of quotes (eg <div hx-target=" foo="bar">)
         return get_position_by_query(
             r#"
             (
-              (_
-                (ERROR 
+              [
+                (_
+                  (ERROR
+                    (tag_name)
+
+                    (attribute_name) @attr_name
+                    (attribute_value)? @attr_value
+                  ) @incomplete_tag
+                )
+
+                (_
                   (tag_name)
-                  (attribute_name) @attr_name
-                  (attribute_value)? @attr_value
-                ) @incomplete_tag
-              )
+
+                  (attribute
+                    (attribute_name) @attr_name
+                    (quoted_attribute_value) @quoted_attr_value
+                  )
+                  (ERROR) @incomplete_tag
+                )
+              ]
 
               (#match? @attr_name "hx-.*=?")
             )"#,
             node,
             source,
+            trigger_point,
         );
     }
 
     // See: https://tree-sitter.github.io/tree-sitter/using-parsers#query-syntax
-    return get_position_by_query(
+    let attribute_position = get_position_by_query(
         r#"(
           (_
             (_ 
               (tag_name)
+
+              (attribute 
+                (attribute_name)  @attr_name
+                (quoted_attribute_value)? @quoted_attr_value
+
+              ) @incomplete_attribute
+            )
+          )
+
+          (#eq? @incomplete_attribute @attr_name)
+          (#match? @attr_name "hx-.*=?")
+        )"#,
+        node,
+        source,
+        trigger_point,
+    );
+
+    debug!("attribute_position {:?}", attribute_position);
+    if attribute_position.is_some() {
+        return attribute_position;
+    }
+
+    return get_position_by_query(
+        r#"(
+          (_
+            (_
+              (tag_name)
+
               (attribute
                 (attribute_name) @attr_name
-                (quoted_attribute_value 
+                (quoted_attribute_value
                   (attribute_value)? @attr_value
-                )? @quoted_attr_value
-              )
-            ) @tag
+                ) @quoted_attr_value
+
+              ) @attributes
+            )
           )
 
           (#match? @attr_name "hx-.*=?")
         )"#,
         node,
         source,
+        trigger_point,
     );
 }
 
@@ -198,19 +250,15 @@ pub fn get_position_from_lsp_completion(
 
     let tree = parser.parse(&text, None)?;
     let root_node = tree.root_node();
+    let trigger_point = Point::new(pos.line as usize, pos.character as usize);
 
-    return query_position(
-        root_node,
-        text.as_str(),
-        pos.line as usize,
-        pos.character as usize,
-    );
+    return query_position(root_node, text.as_str(), trigger_point);
 }
 
 #[cfg(test)]
 mod tests {
     use super::{get_position, query_position, Position};
-    use tree_sitter::Parser;
+    use tree_sitter::{Parser, Point};
 
     fn prepare_tree(text: &str) -> tree_sitter::Tree {
         let language = tree_sitter_html::language();
@@ -231,7 +279,7 @@ mod tests {
 
         let tree = prepare_tree(&text);
 
-        let matches = query_position(tree.root_node(), text, 0, 8);
+        let matches = query_position(tree.root_node(), text, Point::new(0, 8));
         // Fixes issue with not suggesting hx-* attributes
         // let expected = get_position(tree.root_node(), text, 0, 8);
         // assert_eq!(matches, expected);
@@ -245,7 +293,7 @@ mod tests {
         let tree = prepare_tree(&text);
 
         let expected = get_position(tree.root_node(), text, 0, 14);
-        let matches = query_position(tree.root_node(), text, 0, 14);
+        let matches = query_position(tree.root_node(), text, Point::new(0, 14));
 
         assert_eq!(matches, expected);
         assert_eq!(matches, None);
@@ -257,7 +305,7 @@ mod tests {
 
         let tree = prepare_tree(&text);
 
-        let matches = query_position(tree.root_node(), text, 0, 14);
+        let matches = query_position(tree.root_node(), text, Point::new(0, 14));
 
         // The new implementation doesn't return incomplete tags as value :)
         // let expected = get_position(tree.root_node(), text, 0, 14);
@@ -278,7 +326,7 @@ mod tests {
         let tree = prepare_tree(&text);
 
         let expected = get_position(tree.root_node(), text, 0, 14);
-        let matches = query_position(tree.root_node(), text, 0, 14);
+        let matches = query_position(tree.root_node(), text, Point::new(0, 14));
 
         assert_eq!(matches, expected);
         assert_eq!(
@@ -291,7 +339,7 @@ mod tests {
     }
 
     #[test]
-    fn test_it_matches_a_unclosed_tag_in_the_middle() {
+    fn test_it_matches_a_unclosed_tag_in_the_middle_suggest_attribute_values() {
         let text = r##"<div id="fa" hx-swap="hx-swap" hx-swap="hx-swap">
       <span hx-target="
       <button>Click me</button>
@@ -300,7 +348,7 @@ mod tests {
 
         let tree = prepare_tree(&text);
 
-        let matches = query_position(tree.root_node(), text, 1, 16);
+        let matches = query_position(tree.root_node(), text, Point::new(1, 23));
 
         // The new implementation doesn't return incomplete tags as value :)
         // let expected = get_position(tree.root_node(), text, 1, 16);
@@ -324,34 +372,48 @@ mod tests {
 
         let tree = prepare_tree(&text);
 
-        let matches = query_position(tree.root_node(), text, 1, 14);
+        let matches = query_position(tree.root_node(), text, Point::new(1, 14));
 
         assert_eq!(matches, Some(Position::AttributeName("hx-".to_string())));
     }
 
     #[test]
     fn test_it_matches_more_than_one_attribute() {
-        let text = r##"<div hx-get="/foo" hx-target="this" hx->
-    </div>
-    "##;
+        let text = r##"<div hx-get="/foo" hx-target="this" hx- ></div>"##;
 
         let tree = prepare_tree(&text);
 
-        let matches = query_position(tree.root_node(), text, 1, 39);
+        let matches = query_position(tree.root_node(), text, Point::new(0, 39));
 
         assert_eq!(matches, Some(Position::AttributeName("hx-".to_string())));
     }
 
     // skip - This test when suggesting an attribute in the middle of others
-    // #[test]
+    #[test]
     fn test_it_matches_more_than_one_attribute_when_suggesting_in_the_middle() {
-        let text = r##"<div hx-get="/foo" hx-target="" hx-swap="#swap">
-    </div>
+        let text = r##"<div hx-get="/foo" hx-target="" hx-swap="#swap"></div>
     "##;
 
         let tree = prepare_tree(&text);
 
-        let matches = query_position(tree.root_node(), text, 1, 30);
+        let matches = query_position(tree.root_node(), text, Point::new(0, 30));
+
+        assert_eq!(
+            matches,
+            Some(Position::AttributeValue {
+                name: "hx-target".to_string(),
+                value: "\"\"".to_string()
+            })
+        );
+    }
+
+    #[test]
+    fn test_suggest_values_for_incoplete_quoted_value_in_the_middle() {
+        let text = r##"<div hx-get="/foo" hx-target=" hx-swap="#swap"></div>"##;
+
+        let tree = prepare_tree(&text);
+
+        let matches = query_position(tree.root_node(), text, Point::new(0, 30));
 
         assert_eq!(
             matches,
@@ -360,5 +422,17 @@ mod tests {
                 value: "".to_string()
             })
         );
+    }
+
+    #[test]
+    fn test_it_suggests_attributes_for_incoplete_quoted_value_in_the_middle() {
+        let text = r##"<div hx-get="/foo" hx- hx-swap="#swap"></div>
+        <span class="foo" />"##;
+
+        let tree = prepare_tree(&text);
+
+        let matches = query_position(tree.root_node(), text, Point::new(0, 22));
+
+        assert_eq!(matches, Some(Position::AttributeName("hx-".to_string())));
     }
 }
