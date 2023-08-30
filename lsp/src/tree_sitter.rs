@@ -1,5 +1,5 @@
 use crate::tree_sitter_querier::{
-    query_attr_values_for_completion, query_attributes_for_completion,
+    query_attr_keys_for_completion, query_attr_values_for_completion,
 };
 use log::{debug, error};
 use lsp_types::TextDocumentPositionParams;
@@ -127,21 +127,23 @@ fn find_element_referent_to_current_node(node: Node<'_>) -> Option<Node<'_>> {
 }
 
 fn query_position(root: Node<'_>, source: &str, trigger_point: Point) -> Option<Position> {
-    debug!("query_position");
-
     debug!("query_position root {:?}", root.to_sexp());
     let closest_node = root.descendant_for_point_range(trigger_point, trigger_point)?;
     debug!("query_position closest_node {:?}", closest_node.to_sexp());
 
-    let node = find_element_referent_to_current_node(closest_node)?;
+    let element = find_element_referent_to_current_node(closest_node)?;
+    let previous_nodes =
+        element.descendant_for_point_range(element.start_position(), trigger_point)?;
 
-    let attr_completion = query_attributes_for_completion(node, source);
+    debug!("query_position: {:?}", previous_nodes.to_sexp());
+
+    let attr_completion = query_attr_keys_for_completion(previous_nodes, source);
 
     if attr_completion.is_some() {
         return attr_completion;
     }
 
-    let value_completion = query_attr_values_for_completion(node, source);
+    let value_completion = query_attr_values_for_completion(previous_nodes, source);
 
     return value_completion;
 }
@@ -216,8 +218,8 @@ mod tests {
 
         let tree = prepare_tree(&text);
 
-        let expected = get_position(tree.root_node(), text, 0, 14);
-        let matches = query_position(tree.root_node(), text, Point::new(0, 14));
+        let expected = get_position(tree.root_node(), text, 0, 13);
+        let matches = query_position(tree.root_node(), text, Point::new(0, 13));
 
         assert_eq!(matches, expected);
         assert_eq!(matches, None);
@@ -355,5 +357,17 @@ mod tests {
         let matches = query_position(tree.root_node(), text, Point::new(0, 22));
 
         assert_eq!(matches, Some(Position::AttributeName("hx-".to_string())));
+    }
+
+    #[test]
+    fn test_it_suggests_attribute_keys_when_half_completeded() {
+        let text = r##"<div hx-get="/foo" hx-t hx-swap="#swap"></div>
+        <span class="foo" />"##;
+
+        let tree = prepare_tree(&text);
+
+        let matches = query_position(tree.root_node(), text, Point::new(0, 23));
+
+        assert_eq!(matches, Some(Position::AttributeName("hx-t".to_string())));
     }
 }
