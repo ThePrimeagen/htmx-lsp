@@ -10,7 +10,6 @@ fn query_props(
     query_string: &str,
     node: Node<'_>,
     source: &str,
-    trigger_point: Point,
 ) -> Option<HashMap<String, String>> {
     let query = Query::new(tree_sitter_html::language(), query_string).expect(&format!(
         "get_position_by_query invalid query {query_string}"
@@ -34,11 +33,7 @@ fn query_props(
     Some(props)
 }
 
-pub fn query_attributes_for_completion(
-    node: Node<'_>,
-    source: &str,
-    trigger_point: Point,
-) -> Option<Position> {
+pub fn query_attributes_for_completion(node: Node<'_>, source: &str) -> Option<Position> {
     let query_string = r#"
     (
         (_
@@ -62,7 +57,7 @@ pub fn query_attributes_for_completion(
         (#match? @attr_name "hx-.*=?")
     )"#;
 
-    let attr_completion = query_props(query_string, node, source, trigger_point);
+    let attr_completion = query_props(query_string, node, source);
     let props = attr_completion?;
     let attr_name = props.get("attr_name")?;
     if props.get("error_char").is_some() {
@@ -74,11 +69,7 @@ pub fn query_attributes_for_completion(
     return Some(Position::AttributeName(attr_name.to_owned()));
 }
 
-pub fn query_attr_values_for_completion(
-    node: Node<'_>,
-    source: &str,
-    trigger_point: Point,
-) -> Option<Position> {
+pub fn query_attr_values_for_completion(node: Node<'_>, source: &str) -> Option<Position> {
     let query_string = r#"(
       (_
         [
@@ -110,7 +101,7 @@ pub fn query_attr_values_for_completion(
       )
     )"#;
 
-    let value_completion = query_props(query_string, node, source, trigger_point);
+    let value_completion = query_props(query_string, node, source);
     let props = value_completion?;
     let attr_name = props.get("attr_name")?;
     if props.get("open_quote_err").is_some() || props.get("empty_quoted_value").is_some() {

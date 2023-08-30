@@ -135,13 +135,13 @@ fn query_position(root: Node<'_>, source: &str, trigger_point: Point) -> Option<
 
     let node = find_element_referent_to_current_node(closest_node)?;
 
-    let attr_completion = query_attributes_for_completion(node, source, trigger_point);
+    let attr_completion = query_attributes_for_completion(node, source);
 
     if attr_completion.is_some() {
         return attr_completion;
     }
 
-    let value_completion = query_attr_values_for_completion(node, source, trigger_point);
+    let value_completion = query_attr_values_for_completion(node, source);
 
     return value_completion;
 }
