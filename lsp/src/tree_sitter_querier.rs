@@ -14,6 +14,7 @@ fn query_props(
     query_string: &str,
     node: Node<'_>,
     source: &str,
+    trigger_point: Point,
 ) -> Option<HashMap<String, String>> {
     let query = Query::new(tree_sitter_html::language(), query_string).expect(&format!(
         "get_position_by_query invalid query {query_string}"
@@ -26,7 +27,10 @@ fn query_props(
 
     let mut props = HashMap::new();
     matches.into_iter().for_each(|match_| {
-        match_.captures.iter().for_each(|capture| {
+        match_.captures
+            .iter()
+            .filter(|capture| capture.node.start_position() <= trigger_point)
+            .for_each(|capture| {
             let name = capture_names[capture.index as usize].to_owned();
             let value = capture
                 .node
@@ -40,7 +44,11 @@ fn query_props(
     Some(props)
 }
 
-pub fn query_attr_keys_for_completion(node: Node<'_>, source: &str) -> Option<Position> {
+pub fn query_attr_keys_for_completion(
+    node: Node<'_>,
+    source: &str,
+    trigger_point: Point,
+) -> Option<Position> {
     // [ means match any of the following
     let query_string = r#"
     (
@@ -60,23 +68,27 @@ pub fn query_attr_keys_for_completion(node: Node<'_>, source: &str) -> Option<Po
 
               (attribute (attribute_name)) 
 
-              (ERROR) @error_char
-            )
+              (ERROR)
+            ) @unfinished_tag
         ]
     )"#;
 
-    let attr_completion = query_props(query_string, node, source);
+    let attr_completion = query_props(query_string, node, source, trigger_point);
     let props = attr_completion?;
     let attr_name = props.get("attr_name")?;
 
-    if props.get("error_char").is_some() {
+    if props.get("unfinished_tag").is_some() {
         return None;
     }
 
     return Some(Position::AttributeName(attr_name.to_owned()));
 }
 
-pub fn query_attr_values_for_completion(node: Node<'_>, source: &str) -> Option<Position> {
+pub fn query_attr_values_for_completion(
+    node: Node<'_>,
+    source: &str,
+    trigger_point: Point,
+) -> Option<Position> {
     // [ means match any of the following
     let query_string = r#"(
         [
@@ -108,21 +120,12 @@ pub fn query_attr_values_for_completion(node: Node<'_>, source: &str) -> Option<
               (#eq? @quoted_attr_value "\"\"")
             ) @empty_value
           )
-
-          (_
-            (tag_name)
-
-            (attribute 
-              (attribute_name) @attr_name
-              (quoted_attribute_value) @quoted_attr_value
-            ) @empty_value
-          )
         ]
 
         (#match? @attr_name "hx-.*")
     )"#;
 
-    let value_completion = query_props(query_string, node, source);
+    let value_completion = query_props(query_string, node, source, trigger_point);
     let props = value_completion?;
 
     let attr_name = props.get("attr_name")?;
@@ -132,12 +135,6 @@ pub fn query_attr_values_for_completion(node: Node<'_>, source: &str) -> Option<
             value: "".to_string(),
         });
     }
-
-    if let Some(error_char) = props.get("error_char") {
-        if error_char == KEY_VALUE_SEPARATOR {
-            return None;
-        }
-    };
 
     return Some(Position::AttributeValue {
         name: attr_name.to_string(),

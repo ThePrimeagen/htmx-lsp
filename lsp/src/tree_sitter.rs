@@ -60,63 +60,6 @@ fn create_attribute(node: Node<'_>, source: &str) -> Option<Position> {
     return None;
 }
 
-fn get_position_by_query(
-    query: &str,
-    node: Node<'_>,
-    source: &str,
-    trigger_point: Point,
-) -> Option<Position> {
-    // See: https://tree-sitter.github.io/tree-sitter/using-parsers#query-syntax
-    let query = Query::new(tree_sitter_html::language(), query)
-        .expect(&format!("get_position_by_query invalid query {query}"));
-    let mut cursor_qry = QueryCursor::new();
-    let matches = cursor_qry.matches(&query, node, source.as_bytes());
-
-    debug!("get_position_by_query node {:?}", node.to_sexp());
-
-    let capture_names = query.capture_names();
-    debug!("capture_names: {:?}", capture_names);
-
-    let props = matches
-        .into_iter()
-        .fold(HashMap::new(), |mut props, match_| {
-            match_
-                .captures
-                .iter()
-                .filter(|capture| capture.node.start_position() <= trigger_point)
-                .for_each(|capture| {
-                    let name = capture_names[capture.index as usize].to_owned();
-                    let value = capture
-                        .node
-                        .utf8_text(source.as_bytes())
-                        .expect(&format!("failed to parse capture value for '{name}'"))
-                        .to_owned();
-                    props.insert(name, value);
-                });
-
-            props
-        });
-
-    debug!("props: {:?}", props);
-
-    let name = props.get("attr_name")?.to_owned();
-
-    let attr_value = match props.get("quoted_attr_value").or(props.get("attr_value")) {
-        Some(value) => Some(value.to_owned()),
-        None => {
-            return Some(Position::AttributeName(name.to_owned()));
-        }
-    };
-
-    let value = if capture_names.contains(&"incomplete_tag".to_owned()) || attr_value.is_none() {
-        "".to_owned()
-    } else {
-        attr_value?
-    };
-
-    return Some(Position::AttributeValue { name, value });
-}
-
 fn find_element_referent_to_current_node(node: Node<'_>) -> Option<Node<'_>> {
     debug!("node {:?}", node.to_sexp());
     if node.kind() == "element" || node.kind() == "fragment" {
@@ -132,18 +75,14 @@ fn query_position(root: Node<'_>, source: &str, trigger_point: Point) -> Option<
     debug!("query_position closest_node {:?}", closest_node.to_sexp());
 
     let element = find_element_referent_to_current_node(closest_node)?;
-    let previous_nodes =
-        element.descendant_for_point_range(element.start_position(), trigger_point)?;
 
-    debug!("query_position: {:?}", previous_nodes.to_sexp());
-
-    let attr_completion = query_attr_keys_for_completion(previous_nodes, source);
+    let attr_completion = query_attr_keys_for_completion(element, source, trigger_point);
 
     if attr_completion.is_some() {
         return attr_completion;
     }
 
-    let value_completion = query_attr_values_for_completion(previous_nodes, source);
+    let value_completion = query_attr_values_for_completion(element, source, trigger_point);
 
     return value_completion;
 }
