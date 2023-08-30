@@ -1,3 +1,6 @@
+use crate::tree_sitter_querier::{
+    query_attr_values_for_completion, query_attributes_for_completion,
+};
 use log::{debug, error};
 use lsp_types::TextDocumentPositionParams;
 use std::collections::HashMap;
@@ -132,94 +135,15 @@ fn query_position(root: Node<'_>, source: &str, trigger_point: Point) -> Option<
 
     let node = find_element_referent_to_current_node(closest_node)?;
 
-    // Maybe there is a better way to check for this
-    // usually an ERROR node means the there is an incomplete tag at some
-    // point in the tree
-    if node.to_sexp().contains("ERROR") {
-        // This is for cases where there is an unclosed quote or if there is
-        // a mismatch in number of quotes (eg <div hx-target=" foo="bar">)
-        return get_position_by_query(
-            r#"
-            (
-              [
-                (_
-                  (ERROR
-                    (tag_name)
+    let attr_completion = query_attributes_for_completion(node, source, trigger_point);
 
-                    (attribute_name) @attr_name
-                    (attribute_value)? @attr_value
-                  ) @incomplete_tag
-                )
-
-                (_
-                  (tag_name)
-
-                  (attribute
-                    (attribute_name) @attr_name
-                    (quoted_attribute_value) @quoted_attr_value
-                  )
-                  (ERROR) @incomplete_tag
-                )
-              ]
-
-              (#match? @attr_name "hx-.*=?")
-            )"#,
-            node,
-            source,
-            trigger_point,
-        );
+    if attr_completion.is_some() {
+        return attr_completion;
     }
 
-    // See: https://tree-sitter.github.io/tree-sitter/using-parsers#query-syntax
-    let attribute_position = get_position_by_query(
-        r#"(
-          (_
-            (_ 
-              (tag_name)
+    let value_completion = query_attr_values_for_completion(node, source, trigger_point);
 
-              (attribute 
-                (attribute_name)  @attr_name
-                (quoted_attribute_value)? @quoted_attr_value
-
-              ) @incomplete_attribute
-            )
-          )
-
-          (#eq? @incomplete_attribute @attr_name)
-          (#match? @attr_name "hx-.*=?")
-        )"#,
-        node,
-        source,
-        trigger_point,
-    );
-
-    debug!("attribute_position {:?}", attribute_position);
-    if attribute_position.is_some() {
-        return attribute_position;
-    }
-
-    return get_position_by_query(
-        r#"(
-          (_
-            (_
-              (tag_name)
-
-              (attribute
-                (attribute_name) @attr_name
-                (quoted_attribute_value
-                  (attribute_value)? @attr_value
-                ) @quoted_attr_value
-
-              ) @attributes
-            )
-          )
-
-          (#match? @attr_name "hx-.*=?")
-        )"#,
-        node,
-        source,
-        trigger_point,
-    );
+    return value_completion;
 }
 
 fn get_position(root: Node<'_>, source: &str, row: usize, column: usize) -> Option<Position> {
@@ -325,15 +249,13 @@ mod tests {
 
         let tree = prepare_tree(&text);
 
-        let expected = get_position(tree.root_node(), text, 0, 14);
         let matches = query_position(tree.root_node(), text, Point::new(0, 14));
 
-        assert_eq!(matches, expected);
         assert_eq!(
             matches,
             Some(Position::AttributeValue {
                 name: "hx-swap".to_string(),
-                value: "\"\"".to_string()
+                value: "".to_string()
             })
         );
     }
@@ -388,7 +310,6 @@ mod tests {
         assert_eq!(matches, Some(Position::AttributeName("hx-".to_string())));
     }
 
-    // skip - This test when suggesting an attribute in the middle of others
     #[test]
     fn test_it_matches_more_than_one_attribute_when_suggesting_in_the_middle() {
         let text = r##"<div hx-get="/foo" hx-target="" hx-swap="#swap"></div>
@@ -402,7 +323,7 @@ mod tests {
             matches,
             Some(Position::AttributeValue {
                 name: "hx-target".to_string(),
-                value: "\"\"".to_string()
+                value: "".to_string()
             })
         );
     }
