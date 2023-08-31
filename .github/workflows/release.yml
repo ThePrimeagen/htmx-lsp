@@ -3,7 +3,6 @@ name: Build & Release
 on:
   push:
     branches: ["master"]
-  pull_request:
 
 permissions:
   contents: write
