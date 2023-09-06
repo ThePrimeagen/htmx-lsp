@@ -138,7 +138,7 @@ mod tests {
     }
 
     #[test]
-    fn test_it_matches_when_starting_tag() {
+    fn test_it_suggests_attr_names_when_starting_tag() {
         let text = r##"<div hx- ></div>"##;
 
         let tree = prepare_tree(&text);
@@ -151,7 +151,7 @@ mod tests {
     }
 
     #[test]
-    fn test_does_not_match_when_quote_not_initiated() {
+    fn test_it_does_not_suggest_when_quote_not_initiated() {
         let text = r##"<div hx-swap= ></div>"##;
 
         let tree = prepare_tree(&text);
@@ -164,7 +164,7 @@ mod tests {
     }
 
     #[test]
-    fn test_it_matches_when_starting_quote_value() {
+    fn test_it_suggests_attr_values_when_starting_quote_value() {
         let text = r##"<div hx-swap=" ></div>"##;
 
         let tree = prepare_tree(&text);
@@ -184,7 +184,7 @@ mod tests {
     }
 
     #[test]
-    fn test_it_matches_when_open_and_closed_quotes() {
+    fn test_it_suggests_attr_values_when_open_and_closed_quotes() {
         let text = r##"<div hx-swap=""></div>"##;
 
         let tree = prepare_tree(&text);
@@ -201,7 +201,7 @@ mod tests {
     }
 
     #[test]
-    fn test_it_matches_a_unclosed_tag_in_the_middle_suggest_attribute_values() {
+    fn test_it_suggests_attr_values_once_opening_quotes_in_between_tags() {
         let text = r##"<div id="fa" hx-swap="hx-swap" hx-swap="hx-swap">
       <span hx-target="
       <button>Click me</button>
@@ -225,10 +225,10 @@ mod tests {
     }
 
     #[test]
-    fn test_it_matches_a_unclosed_tag_in_the_middle_() {
+    fn test_it_suggests_attr_names_for_incomplete_attr_in_between_tags() {
         let text = r##"<div id="fa" hx-target="this" hx-swap="hx-swap">
       <span hx-
-      <tebutton>Click me</button>
+      <button>Click me</button>
     </div>
     "##;
 
@@ -251,7 +251,7 @@ mod tests {
     }
 
     #[test]
-    fn test_it_matches_more_than_one_attribute_when_suggesting_in_the_middle() {
+    fn test_it_suggests_attr_value_when_attr_is_empty_and_in_between_attributes() {
         let text = r##"<div hx-get="/foo" hx-target="" hx-swap="#swap"></div>
     "##;
 
@@ -269,7 +269,7 @@ mod tests {
     }
 
     #[test]
-    fn test_suggest_values_for_incoplete_quoted_value_in_the_middle() {
+    fn test_it_suggests_attr_values_for_incoplete_quoted_attr_when_in_between_attributes() {
         let text = r##"<div hx-get="/foo" hx-target=" hx-swap="#swap"></div>"##;
 
         let tree = prepare_tree(&text);
@@ -286,7 +286,7 @@ mod tests {
     }
 
     #[test]
-    fn test_it_suggests_attributes_for_incoplete_quoted_value_in_the_middle() {
+    fn test_it_suggests_attr_names_for_incoplete_quoted_value_in_between_attributes() {
         let text = r##"<div hx-get="/foo" hx- hx-swap="#swap"></div>
         <span class="foo" />"##;
 
@@ -310,7 +310,7 @@ mod tests {
     }
 
     #[test]
-    fn test_suggest_values_for_already_filled_attributes() {
+    fn test_it_suggests_values_for_already_filled_attributes() {
         let text = r##"<div hx-get="/foo" hx-target="find " hx-swap="#swap"></div>"##;
 
         let tree = prepare_tree(&text);
@@ -327,12 +327,12 @@ mod tests {
     }
 
     #[test]
-    fn test_does_not_suggest_when_cursor_isnt_withing_a_htmx_attribute() {
-        let text = r##"<div hx-get="/foo" class="p-4" ></div>"##;
+    fn test_it_does_not_suggest_when_cursor_isnt_within_a_htmx_attribute() {
+        let text = r##"<div hx-get="/foo"  class="p-4" ></div>"##;
 
         let tree = prepare_tree(&text);
 
-        let matches = query_position(tree.root_node(), text, Point::new(0, 18));
+        let matches = query_position(tree.root_node(), text, Point::new(0, 19));
 
         assert_eq!(matches, None);
     }
