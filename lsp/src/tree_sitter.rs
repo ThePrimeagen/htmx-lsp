@@ -3,8 +3,7 @@ use crate::tree_sitter_querier::{
 };
 use log::{debug, error};
 use lsp_types::TextDocumentPositionParams;
-use std::collections::HashMap;
-use tree_sitter::{Node, Parser, Point, Query, QueryCursor};
+use tree_sitter::{Node, Parser, Point};
 
 use crate::text_store::get_text_document;
 
@@ -308,5 +307,33 @@ mod tests {
         let matches = query_position(tree.root_node(), text, Point::new(0, 23));
 
         assert_eq!(matches, Some(Position::AttributeName("hx-t".to_string())));
+    }
+
+    #[test]
+    fn test_suggest_values_for_already_filled_attributes() {
+        let text = r##"<div hx-get="/foo" hx-target="find " hx-swap="#swap"></div>"##;
+
+        let tree = prepare_tree(&text);
+
+        let matches = query_position(tree.root_node(), text, Point::new(0, 35));
+
+        assert_eq!(
+            matches,
+            Some(Position::AttributeValue {
+                name: "hx-target".to_string(),
+                value: "".to_string()
+            })
+        );
+    }
+
+    #[test]
+    fn test_does_not_suggest_when_cursor_isnt_withing_a_htmx_attribute() {
+        let text = r##"<div hx-get="/foo" class="p-4" ></div>"##;
+
+        let tree = prepare_tree(&text);
+
+        let matches = query_position(tree.root_node(), text, Point::new(0, 18));
+
+        assert_eq!(matches, None);
     }
 }
