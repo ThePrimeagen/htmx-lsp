@@ -16,11 +16,10 @@ use lsp_server::{Connection, Message, Response};
 
 use crate::{
     handle::{handle_notification, handle_other, handle_request, HtmxResult},
-    htmx::init_hx_tags,
     text_store::init_text_store,
 };
 
-fn to_completion_list(items: Vec<HxCompletion>) -> CompletionList {
+fn to_completion_list(items: &[HxCompletion]) -> CompletionList {
     return CompletionList {
         is_incomplete: true,
         items: items
@@ -64,7 +63,7 @@ fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
             _ => handle_other(msg),
         };
 
-        match match result {
+        if let Err(e) = match result {
             Some(HtmxResult::AttributeCompletion(c)) => {
                 let str = match serde_json::to_value(&to_completion_list(c.items)) {
                     Ok(s) => s,
@@ -84,18 +83,15 @@ fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
                 let hover_response = lsp_types::Hover {
                     contents: HoverContents::Scalar(MarkedString::LanguageString(LanguageString {
                         language: "html".to_string(),
-                        value: hover_resp.value.clone(),
+                        value: hover_resp.value.to_string(),
                     })),
                     range: None,
                 };
 
-                let str = match serde_json::to_value(&hover_response) {
-                    Ok(s) => s,
-                    Err(err) => {
-                        error!("Fail to parse hover_response: {:?}", err);
-                        return Err(anyhow::anyhow!("Fail to parse hover_response"));
-                    }
-                };
+                let str = serde_json::to_value(&hover_response).map_err(|err| {
+                    error!("Fail to parse hover_response: {:?}", err);
+                    anyhow::anyhow!("Fail to parse hover_response")
+                })?;
 
                 connection.sender.send(Message::Response(Response {
                     id: hover_resp.id,
@@ -105,8 +101,7 @@ fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
             }
             None => continue,
         } {
-            Ok(_) => {}
-            Err(e) => error!("failed to send response: {:?}", e),
+            error!("failed to send response: {:?}", e);
         };
     }
 
@@ -115,7 +110,6 @@ fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
 
 pub fn start_lsp() -> Result<()> {
     init_text_store();
-    init_hx_tags();
 
     // Note that  we must have our logging only write out to stderr.
     info!("starting generic LSP server");
@@ -129,11 +123,7 @@ pub fn start_lsp() -> Result<()> {
         text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
         completion_provider: Some(lsp_types::CompletionOptions {
             resolve_provider: Some(false),
-            trigger_characters: Some(vec![
-                "-".to_string(),
-                "\"".to_string(),
-                " ".to_string(),
-            ]),
+            trigger_characters: Some(vec!["-".to_string(), "\"".to_string(), " ".to_string()]),
             work_done_progress_options: WorkDoneProgressOptions {
                 work_done_progress: None,
             },

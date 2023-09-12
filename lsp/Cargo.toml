@@ -17,3 +17,4 @@ util = { path = "../util" }
 tree-sitter.workspace = true
 tree-sitter-html.workspace = true
 maplit = "1.0.2"
+lazy_static = "1.4.0"

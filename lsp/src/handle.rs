@@ -7,10 +7,7 @@ use log::{debug, error, warn};
 use lsp_server::{Message, Notification, Request, RequestId};
 use lsp_types::{CompletionContext, CompletionParams, CompletionTriggerKind};
 
-#[derive(serde::Deserialize, Debug)]
-struct Text {
-    text: String,
-}
+type Text = String;
 
 #[derive(serde::Deserialize, Debug)]
 struct TextDocumentLocation {
@@ -41,14 +38,14 @@ struct TextDocumentOpen {
 
 #[derive(Debug)]
 pub struct HtmxAttributeCompletion {
-    pub items: Vec<HxCompletion>,
+    pub items: &'static [HxCompletion],
     pub id: RequestId,
 }
 
 #[derive(Debug)]
 pub struct HtmxAttributeHoverResult {
     pub id: RequestId,
-    pub value: String,
+    pub value: &'static str,
 }
 
 #[derive(Debug)]
@@ -64,7 +61,7 @@ pub enum HtmxResult {
 fn handle_didChange(noti: Notification) -> Option<HtmxResult> {
     let text_document_changes: TextDocumentChanges = serde_json::from_value(noti.params).ok()?;
     let uri = text_document_changes.text_document.uri;
-    let text = text_document_changes.content_changes[0].text.to_string();
+    let text = text_document_changes.content_changes[0].clone();
 
     if text_document_changes.content_changes.len() > 1 {
         error!("more than one content change, please be wary");
@@ -160,7 +157,7 @@ fn handle_hover(req: Request) -> Option<HtmxResult> {
 
     return Some(HtmxResult::AttributeHover(HtmxAttributeHoverResult {
         id: req.id,
-        value: attribute.desc,
+        value: &attribute.desc,
     }));
 }
 
