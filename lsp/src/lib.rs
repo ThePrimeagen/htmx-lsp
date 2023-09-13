@@ -14,10 +14,7 @@ use lsp_types::{
 
 use lsp_server::{Connection, Message, Response};
 
-use crate::{
-    handle::{handle_notification, handle_other, handle_request, HtmxResult},
-    text_store::init_text_store,
-};
+use crate::handle::{handle_notification, handle_other, handle_request, HtmxResult};
 
 fn to_completion_list(items: &[HxCompletion]) -> CompletionList {
     return CompletionList {
@@ -102,15 +99,13 @@ fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
             None => continue,
         } {
             error!("failed to send response: {:?}", e);
-        };
+        }
     }
 
-    return Ok(());
+    Ok(())
 }
 
 pub fn start_lsp() -> Result<()> {
-    init_text_store();
-
     // Note that  we must have our logging only write out to stderr.
     info!("starting generic LSP server");
 
