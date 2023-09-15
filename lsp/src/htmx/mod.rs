@@ -45,7 +45,7 @@ impl TryFrom<&(PathBuf, String)> for HxCompletion {
 pub fn hx_completion(text_params: TextDocumentPositionParams) -> Option<Vec<HxCompletion>> {
     let result = crate::tree_sitter::get_position_from_lsp_completion(text_params.clone())?;
 
-    error!("result: {:?} params: {:?}", result, text_params);
+    debug!("result: {:?} params: {:?}", result, text_params);
 
     match result {
         Position::AttributeName(name) => {

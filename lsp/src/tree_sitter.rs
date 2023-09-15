@@ -1,7 +1,9 @@
+use crate::tree_sitter_querier::{
+    query_attr_keys_for_completion, query_attr_values_for_completion,
+};
 use log::{debug, error};
 use lsp_types::TextDocumentPositionParams;
-use std::collections::HashMap;
-use tree_sitter::{Node, Parser, Point, Query, QueryCursor};
+use tree_sitter::{Node, Parser, Point};
 
 use crate::text_store::get_text_document;
 
@@ -57,55 +59,6 @@ fn create_attribute(node: Node<'_>, source: &str) -> Option<Position> {
     return None;
 }
 
-fn get_position_by_query(query: &str, node: Node<'_>, source: &str) -> Option<Position> {
-    let query = Query::new(tree_sitter_html::language(), query)
-        .expect(&format!("get_position_by_query invalid query {query}"));
-    let mut cursor = QueryCursor::new();
-    let matches = cursor.matches(&query, node, source.as_bytes());
-
-    debug!("get_position_by_query node {:?}", node.to_sexp());
-
-    // FIXME this only covers suggestion for attributes at the end of the tag!
-    let first_match = matches.last()?;
-
-    let capture_names = query.capture_names();
-    debug!("get_position_by_query captures {:?}", capture_names);
-
-    debug!("get_position_by_query first_match {:?}", first_match);
-
-    let props = first_match
-        .captures
-        .iter()
-        .fold(HashMap::new(), |mut props, capture| {
-            let name = capture_names[capture.index as usize].to_owned();
-            let value = capture
-                .node
-                .utf8_text(source.as_bytes())
-                .expect(&format!("failed to parse capture value for '{name}'"))
-                .to_owned();
-
-            props.insert(name, value);
-
-            props
-        });
-
-    let name = props.get("attr_name")?.to_owned();
-
-    let attr_value = match props.get("attr_value").or(props.get("quoted_attr_value")) {
-        Some(value) => Some(value.to_owned()),
-        None => {
-            return Some(Position::AttributeName(name.to_owned()));
-        }
-    };
-
-    let value = match props.get("incomplete_tag") {
-        Some(_) => "".to_owned(), // otherwise it gets other tags as string
-        None => attr_value.expect("at this point value must be present"),
-    };
-
-    return Some(Position::AttributeValue { name, value });
-}
-
 fn find_element_referent_to_current_node(node: Node<'_>) -> Option<Node<'_>> {
     debug!("node {:?}", node.to_sexp());
     if node.kind() == "element" || node.kind() == "fragment" {
@@ -115,59 +68,22 @@ fn find_element_referent_to_current_node(node: Node<'_>) -> Option<Node<'_>> {
     return find_element_referent_to_current_node(node.parent()?);
 }
 
-fn query_position(root: Node<'_>, source: &str, row: usize, column: usize) -> Option<Position> {
-    debug!("query_position");
-
+fn query_position(root: Node<'_>, source: &str, trigger_point: Point) -> Option<Position> {
     debug!("query_position root {:?}", root.to_sexp());
-    let closest_node =
-        root.descendant_for_point_range(Point { row, column }, Point { row, column })?;
+    let closest_node = root.descendant_for_point_range(trigger_point, trigger_point)?;
     debug!("query_position closest_node {:?}", closest_node.to_sexp());
 
-    let node = find_element_referent_to_current_node(closest_node)?;
+    let element = find_element_referent_to_current_node(closest_node)?;
 
-    // Maybe there is a better way to check for this
-    // usually an ERROR node means the there is an incomplete tag at some
-    // point in the tree
-    if node.to_sexp().contains("ERROR") {
-        // See: https://tree-sitter.github.io/tree-sitter/using-parsers#query-syntax
-        return get_position_by_query(
-            r#"
-            (
-              (_
-                (ERROR 
-                  (tag_name)
-                  (attribute_name) @attr_name
-                  (attribute_value)? @attr_value
-                ) @incomplete_tag
-              )
+    let attr_completion = query_attr_keys_for_completion(element, source, trigger_point);
 
-              (#match? @attr_name "hx-.*=?")
-            )"#,
-            node,
-            source,
-        );
+    if attr_completion.is_some() {
+        return attr_completion;
     }
 
-    // See: https://tree-sitter.github.io/tree-sitter/using-parsers#query-syntax
-    return get_position_by_query(
-        r#"(
-          (_
-            (_ 
-              (tag_name)
-              (attribute
-                (attribute_name) @attr_name
-                (quoted_attribute_value 
-                  (attribute_value)? @attr_value
-                )? @quoted_attr_value
-              )
-            ) @tag
-          )
+    let value_completion = query_attr_values_for_completion(element, source, trigger_point);
 
-          (#match? @attr_name "hx-.*=?")
-        )"#,
-        node,
-        source,
-    );
+    return value_completion;
 }
 
 fn get_position(root: Node<'_>, source: &str, row: usize, column: usize) -> Option<Position> {
@@ -198,19 +114,15 @@ pub fn get_position_from_lsp_completion(
 
     let tree = parser.parse(&text, None)?;
     let root_node = tree.root_node();
+    let trigger_point = Point::new(pos.line as usize, pos.character as usize);
 
-    return query_position(
-        root_node,
-        text.as_str(),
-        pos.line as usize,
-        pos.character as usize,
-    );
+    return query_position(root_node, text.as_str(), trigger_point);
 }
 
 #[cfg(test)]
 mod tests {
     use super::{get_position, query_position, Position};
-    use tree_sitter::Parser;
+    use tree_sitter::{Parser, Point};
 
     fn prepare_tree(text: &str) -> tree_sitter::Tree {
         let language = tree_sitter_html::language();
@@ -226,12 +138,12 @@ mod tests {
     }
 
     #[test]
-    fn test_it_matches_when_starting_tag() {
+    fn test_it_suggests_attr_names_when_starting_tag() {
         let text = r##"<div hx- ></div>"##;
 
         let tree = prepare_tree(&text);
 
-        let matches = query_position(tree.root_node(), text, 0, 8);
+        let matches = query_position(tree.root_node(), text, Point::new(0, 8));
         // Fixes issue with not suggesting hx-* attributes
         // let expected = get_position(tree.root_node(), text, 0, 8);
         // assert_eq!(matches, expected);
@@ -239,25 +151,25 @@ mod tests {
     }
 
     #[test]
-    fn test_does_not_match_when_quote_not_initiated() {
+    fn test_it_does_not_suggest_when_quote_not_initiated() {
         let text = r##"<div hx-swap= ></div>"##;
 
         let tree = prepare_tree(&text);
 
-        let expected = get_position(tree.root_node(), text, 0, 14);
-        let matches = query_position(tree.root_node(), text, 0, 14);
+        let expected = get_position(tree.root_node(), text, 0, 13);
+        let matches = query_position(tree.root_node(), text, Point::new(0, 13));
 
         assert_eq!(matches, expected);
         assert_eq!(matches, None);
     }
 
     #[test]
-    fn test_it_matches_when_starting_quote_value() {
+    fn test_it_suggests_attr_values_when_starting_quote_value() {
         let text = r##"<div hx-swap=" ></div>"##;
 
         let tree = prepare_tree(&text);
 
-        let matches = query_position(tree.root_node(), text, 0, 14);
+        let matches = query_position(tree.root_node(), text, Point::new(0, 14));
 
         // The new implementation doesn't return incomplete tags as value :)
         // let expected = get_position(tree.root_node(), text, 0, 14);
@@ -272,26 +184,24 @@ mod tests {
     }
 
     #[test]
-    fn test_it_matches_when_open_and_closed_quotes() {
+    fn test_it_suggests_attr_values_when_open_and_closed_quotes() {
         let text = r##"<div hx-swap=""></div>"##;
 
         let tree = prepare_tree(&text);
 
-        let expected = get_position(tree.root_node(), text, 0, 14);
-        let matches = query_position(tree.root_node(), text, 0, 14);
+        let matches = query_position(tree.root_node(), text, Point::new(0, 14));
 
-        assert_eq!(matches, expected);
         assert_eq!(
             matches,
             Some(Position::AttributeValue {
                 name: "hx-swap".to_string(),
-                value: "\"\"".to_string()
+                value: "".to_string()
             })
         );
     }
 
     #[test]
-    fn test_it_matches_a_unclosed_tag_in_the_middle() {
+    fn test_it_suggests_attr_values_once_opening_quotes_in_between_tags() {
         let text = r##"<div id="fa" hx-swap="hx-swap" hx-swap="hx-swap">
       <span hx-target="
       <button>Click me</button>
@@ -300,7 +210,7 @@ mod tests {
 
         let tree = prepare_tree(&text);
 
-        let matches = query_position(tree.root_node(), text, 1, 16);
+        let matches = query_position(tree.root_node(), text, Point::new(1, 23));
 
         // The new implementation doesn't return incomplete tags as value :)
         // let expected = get_position(tree.root_node(), text, 1, 16);
@@ -315,43 +225,39 @@ mod tests {
     }
 
     #[test]
-    fn test_it_matches_a_unclosed_tag_in_the_middle_() {
+    fn test_it_suggests_attr_names_for_incomplete_attr_in_between_tags() {
         let text = r##"<div id="fa" hx-target="this" hx-swap="hx-swap">
       <span hx-
-      <tebutton>Click me</button>
+      <button>Click me</button>
     </div>
     "##;
 
         let tree = prepare_tree(&text);
 
-        let matches = query_position(tree.root_node(), text, 1, 14);
+        let matches = query_position(tree.root_node(), text, Point::new(1, 14));
 
         assert_eq!(matches, Some(Position::AttributeName("hx-".to_string())));
     }
 
     #[test]
     fn test_it_matches_more_than_one_attribute() {
-        let text = r##"<div hx-get="/foo" hx-target="this" hx->
-    </div>
-    "##;
+        let text = r##"<div hx-get="/foo" hx-target="this" hx- ></div>"##;
 
         let tree = prepare_tree(&text);
 
-        let matches = query_position(tree.root_node(), text, 1, 39);
+        let matches = query_position(tree.root_node(), text, Point::new(0, 39));
 
         assert_eq!(matches, Some(Position::AttributeName("hx-".to_string())));
     }
 
-    // skip - This test when suggesting an attribute in the middle of others
-    // #[test]
-    fn test_it_matches_more_than_one_attribute_when_suggesting_in_the_middle() {
-        let text = r##"<div hx-get="/foo" hx-target="" hx-swap="#swap">
-    </div>
+    #[test]
+    fn test_it_suggests_attr_value_when_attr_is_empty_and_in_between_attributes() {
+        let text = r##"<div hx-get="/foo" hx-target="" hx-swap="#swap"></div>
     "##;
 
         let tree = prepare_tree(&text);
 
-        let matches = query_position(tree.root_node(), text, 1, 30);
+        let matches = query_position(tree.root_node(), text, Point::new(0, 30));
 
         assert_eq!(
             matches,
@@ -360,5 +266,74 @@ mod tests {
                 value: "".to_string()
             })
         );
+    }
+
+    #[test]
+    fn test_it_suggests_attr_values_for_incoplete_quoted_attr_when_in_between_attributes() {
+        let text = r##"<div hx-get="/foo" hx-target=" hx-swap="#swap"></div>"##;
+
+        let tree = prepare_tree(&text);
+
+        let matches = query_position(tree.root_node(), text, Point::new(0, 30));
+
+        assert_eq!(
+            matches,
+            Some(Position::AttributeValue {
+                name: "hx-target".to_string(),
+                value: "".to_string()
+            })
+        );
+    }
+
+    #[test]
+    fn test_it_suggests_attr_names_for_incoplete_quoted_value_in_between_attributes() {
+        let text = r##"<div hx-get="/foo" hx- hx-swap="#swap"></div>
+        <span class="foo" />"##;
+
+        let tree = prepare_tree(&text);
+
+        let matches = query_position(tree.root_node(), text, Point::new(0, 22));
+
+        assert_eq!(matches, Some(Position::AttributeName("hx-".to_string())));
+    }
+
+    #[test]
+    fn test_it_suggests_attribute_keys_when_half_completeded() {
+        let text = r##"<div hx-get="/foo" hx-t hx-swap="#swap"></div>
+        <span class="foo" />"##;
+
+        let tree = prepare_tree(&text);
+
+        let matches = query_position(tree.root_node(), text, Point::new(0, 23));
+
+        assert_eq!(matches, Some(Position::AttributeName("hx-t".to_string())));
+    }
+
+    #[test]
+    fn test_it_suggests_values_for_already_filled_attributes() {
+        let text = r##"<div hx-get="/foo" hx-target="find " hx-swap="#swap"></div>"##;
+
+        let tree = prepare_tree(&text);
+
+        let matches = query_position(tree.root_node(), text, Point::new(0, 35));
+
+        assert_eq!(
+            matches,
+            Some(Position::AttributeValue {
+                name: "hx-target".to_string(),
+                value: "".to_string()
+            })
+        );
+    }
+
+    #[test]
+    fn test_it_does_not_suggest_when_cursor_isnt_within_a_htmx_attribute() {
+        let text = r##"<div hx-get="/foo"  class="p-4" ></div>"##;
+
+        let tree = prepare_tree(&text);
+
+        let matches = query_position(tree.root_node(), text, Point::new(0, 19));
+
+        assert_eq!(matches, None);
     }
 }
