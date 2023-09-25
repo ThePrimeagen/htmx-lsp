@@ -91,7 +91,7 @@ jobs:
         shell: bash
         run: |
           RELEASE_VERSION=$(awk -F ' = ' '$1 ~ /version/ { gsub(/["]/, "", $2); printf("%s",$2) }' Cargo.toml)
-          OLD_VERSION=$(awk -F ' = ' '$1 ~ /version/ { gsub(/["]/, "", $2); printf("%s",$2) }' <<< "$(git show HEAD~1:Cargo.toml)")
+          OLD_VERSION=$(curl "https://api.github.com/repos/ThePrimeagen/htmx-lsp/releases/latest" | grep "tag_name" | cut -d'"' -f4)
 
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
 
