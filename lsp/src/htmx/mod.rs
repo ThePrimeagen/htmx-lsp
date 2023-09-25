@@ -31,14 +31,13 @@ impl TryFrom<&(PathBuf, String)> for HxCompletion {
     type Error = anyhow::Error;
 
     fn try_from((path, desc): &(PathBuf, String)) -> Result<Self, Self::Error> {
-        let name = path.to_str().unwrap_or("").to_string();
-        if name == "" {
-            return Err(anyhow::anyhow!("Invalid path"));
+        match path.to_str() {
+            None | Some("") => anyhow::bail!("Invalid path"),
+            Some(name) => Ok(Self {
+                name: name.to_string(),
+                desc: desc.to_string(),
+            }),
         }
-        return Ok(Self {
-            name,
-            desc: desc.to_string(),
-        });
     }
 }
 
