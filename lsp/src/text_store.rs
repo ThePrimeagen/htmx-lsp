@@ -1,4 +1,7 @@
-use std::{collections::HashMap, sync::{OnceLock, Arc, Mutex}};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex, OnceLock},
+};
 
 use lsp_types::Url;
 

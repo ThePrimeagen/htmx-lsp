@@ -13,6 +13,8 @@ pub enum Position {
     AttributeValue { name: String, value: String },
 }
 
+// TODO: remove if not used
+#[allow(dead_code)]
 fn get_text(node: Node<'_>, source: &str) -> String {
     return node
         .utf8_text(source.as_bytes())
@@ -20,6 +22,8 @@ fn get_text(node: Node<'_>, source: &str) -> String {
         .to_string();
 }
 
+// TODO: remove if not used
+#[allow(dead_code)]
 fn get_attribute_name_and_value(node: Node<'_>, source: &str) -> Option<Position> {
     let value = get_text(node, source);
     let name = get_text(node.prev_named_sibling()?, source);
@@ -27,6 +31,8 @@ fn get_attribute_name_and_value(node: Node<'_>, source: &str) -> Option<Position
     return Some(Position::AttributeValue { name, value });
 }
 
+// TODO: remove if not used
+#[allow(dead_code)]
 fn create_attribute(node: Node<'_>, source: &str) -> Option<Position> {
     match node.kind() {
         "\"" => return create_attribute(node.parent()?, source),
@@ -86,6 +92,8 @@ fn query_position(root: Node<'_>, source: &str, trigger_point: Point) -> Option<
     return value_completion;
 }
 
+// TODO: remove if not used
+#[allow(dead_code)]
 fn get_position(root: Node<'_>, source: &str, row: usize, column: usize) -> Option<Position> {
     error!("get_position");
 

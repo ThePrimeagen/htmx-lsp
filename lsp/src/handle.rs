@@ -1,7 +1,6 @@
 use crate::{
     htmx::{hx_completion, hx_hover, HxCompletion},
     text_store::TEXT_STORE,
-    tree_sitter::{get_position_from_lsp_completion, Position},
 };
 use log::{debug, error, warn};
 use lsp_server::{Message, Notification, Request, RequestId};

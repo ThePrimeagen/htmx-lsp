@@ -8,8 +8,8 @@ use anyhow::Result;
 use htmx::HxCompletion;
 use log::{debug, error, info, warn};
 use lsp_types::{
-    CompletionItem, CompletionItemKind, CompletionList, HoverContents, HoverParams,
-    InitializeParams, LanguageString, MarkedString, ServerCapabilities, TextDocumentSyncCapability,
+    CompletionItem, CompletionItemKind, CompletionList, HoverContents, InitializeParams,
+    LanguageString, MarkedString, ServerCapabilities, TextDocumentSyncCapability,
     TextDocumentSyncKind, WorkDoneProgressOptions,
 };
 
