@@ -49,8 +49,8 @@ pub fn hx_completion(text_params: TextDocumentPositionParams) -> Option<&'static
     error!("result: {:?} params: {:?}", result, text_params);
 
     match result {
-        Position::AttributeName(name) if name.starts_with("hx-") => Some(*HX_TAGS),
-        Position::AttributeValue { name, .. } => Some(*HX_ATTRIBUTE_VALUES.get(name.as_str())?),
+        Position::AttributeName(name) if name.starts_with("hx-") => Some(&HX_TAGS),
+        Position::AttributeValue { name, .. } => Some(HX_ATTRIBUTE_VALUES.get(name.as_str())?),
         _ => None,
     }
 }
@@ -66,13 +66,12 @@ pub fn hx_hover(text_params: TextDocumentPositionParams) -> Option<&'static HxCo
     }
 }
 
-fn to_hx_completion(values: &[(&str, &str)]) -> &'static [HxCompletion] {
-    let completions: Vec<_> = values.iter().filter_map(|x| x.try_into().ok()).collect();
-    completions.leak()
+fn to_hx_completion(values: &[(&str, &str)]) -> Vec<HxCompletion> {
+    values.iter().filter_map(|x| x.try_into().ok()).collect()
 }
 
 lazy_static! {
-    pub static ref HX_ATTRIBUTE_VALUES: HashMap<&'static str, &'static [HxCompletion]> = maplit::hashmap! {
+    pub static ref HX_ATTRIBUTE_VALUES: HashMap<&'static str, Vec<HxCompletion>> = maplit::hashmap! {
         "hx-swap" => to_hx_completion(&[
             ("innerHTML", include_str!("./hx-swap/innerHTML.md")),
             ("outerHTML", include_str!("./hx-swap/outerHTML.md")),
@@ -178,7 +177,7 @@ lazy_static! {
             ("queue", include_str!("./hx-sync/queue.md")),
         ])
     };
-    pub static ref HX_TAGS: &'static [HxCompletion] = &to_hx_completion(&[
+    pub static ref HX_TAGS: Vec<HxCompletion> = to_hx_completion(&[
         ("hx-boost", include_str!("./attributes/hx-boost.md")),
         ("hx-delete", include_str!("./attributes/hx-delete.md")),
         ("hx-get", include_str!("./attributes/hx-get.md")),
