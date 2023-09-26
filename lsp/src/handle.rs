@@ -77,7 +77,7 @@ fn handle_didChange(noti: Notification) -> Option<HtmxResult> {
         .texts
         .insert(uri, text);
 
-    return None;
+    None
 }
 
 #[allow(non_snake_case)]
@@ -102,7 +102,7 @@ fn handle_didOpen(noti: Notification) -> Option<HtmxResult> {
             text_document_changes.text.to_string(),
         );
 
-    return None;
+    None
 }
 
 #[allow(non_snake_case)]
@@ -133,16 +133,16 @@ fn handle_completion(req: Request) -> Option<HtmxResult> {
                 completion.context, items
             );
 
-            return Some(HtmxResult::AttributeCompletion(HtmxAttributeCompletion {
+            Some(HtmxResult::AttributeCompletion(HtmxAttributeCompletion {
                 items,
                 id: req.id,
-            }));
+            }))
         }
         _ => {
             error!("unhandled completion context: {:?}", completion.context);
-            return None;
+            None
         }
-    };
+    }
 }
 
 fn handle_hover(req: Request) -> Option<HtmxResult> {
@@ -157,10 +157,10 @@ fn handle_hover(req: Request) -> Option<HtmxResult> {
 
     debug!("handle_request attribute: {:?}", attribute);
 
-    return Some(HtmxResult::AttributeHover(HtmxAttributeHoverResult {
+    Some(HtmxResult::AttributeHover(HtmxAttributeHoverResult {
         id: req.id,
         value: attribute.desc,
-    }));
+    }))
 }
 
 pub fn handle_request(req: Request) -> Option<HtmxResult> {
@@ -188,7 +188,7 @@ pub fn handle_notification(noti: Notification) -> Option<HtmxResult> {
 
 pub fn handle_other(msg: Message) -> Option<HtmxResult> {
     warn!("unhandled message {:?}", msg);
-    return None;
+    None
 }
 
 #[cfg(test)]
@@ -199,7 +199,7 @@ mod tests {
     use std::sync::Once;
 
     static SETUP: Once = Once::new();
-    fn prepare_store(file: &str, content: &str) -> () {
+    fn prepare_store(file: &str, content: &str) {
         SETUP.call_once(|| {
             htmx::init_hx_tags();
             init_text_store();

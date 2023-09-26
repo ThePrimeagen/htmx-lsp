@@ -58,7 +58,7 @@ pub fn hx_completion(text_params: TextDocumentPositionParams) -> Option<Vec<HxCo
         }
     };
 
-    return None;
+    None
 }
 
 pub fn hx_hover(text_params: TextDocumentPositionParams) -> Option<HxCompletion> {
@@ -69,14 +69,14 @@ pub fn hx_hover(text_params: TextDocumentPositionParams) -> Option<HxCompletion>
         Position::AttributeName(name) => HX_TAGS
             .get()
             .expect("Why it can't get HX_TAGS?")
-            .into_iter()
+            .iter()
             .find(|x| x.name == name)
             .cloned(),
 
         Position::AttributeValue { name, .. } => HX_TAGS
             .get()
             .expect("Why it can't get HX_TAGS?")
-            .into_iter()
+            .iter()
             .find(|x| x.name == name)
             .cloned(),
     }

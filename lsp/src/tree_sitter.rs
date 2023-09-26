@@ -28,7 +28,7 @@ fn get_attribute_name_and_value(node: Node<'_>, source: &str) -> Option<Position
     let value = get_text(node, source);
     let name = get_text(node.prev_named_sibling()?, source);
 
-    return Some(Position::AttributeValue { name, value });
+    Some(Position::AttributeValue { name, value })
 }
 
 // TODO: remove if not used
@@ -62,7 +62,7 @@ fn create_attribute(node: Node<'_>, source: &str) -> Option<Position> {
         }
         _ => {}
     };
-    return None;
+    None
 }
 
 fn find_element_referent_to_current_node(node: Node<'_>) -> Option<Node<'_>> {
@@ -87,9 +87,7 @@ fn query_position(root: Node<'_>, source: &str, trigger_point: Point) -> Option<
         return attr_completion;
     }
 
-    let value_completion = query_attr_values_for_completion(element, source, trigger_point);
-
-    return value_completion;
+    query_attr_values_for_completion(element, source, trigger_point)
 }
 
 // TODO: remove if not used
@@ -101,7 +99,7 @@ fn get_position(root: Node<'_>, source: &str, row: usize, column: usize) -> Opti
 
     error!("get_position: desc {:?}", desc);
 
-    return create_attribute(desc, source);
+    create_attribute(desc, source)
 }
 
 pub fn get_position_from_lsp_completion(
@@ -140,16 +138,14 @@ mod tests {
             .set_language(language)
             .expect("could not load html grammer");
 
-        let tree = parser.parse(&text, None).expect("not to fail");
-
-        return tree;
+        parser.parse(text, None).expect("not to fail")
     }
 
     #[test]
     fn test_it_suggests_attr_names_when_starting_tag() {
         let text = r##"<div hx- ></div>"##;
 
-        let tree = prepare_tree(&text);
+        let tree = prepare_tree(text);
 
         let matches = query_position(tree.root_node(), text, Point::new(0, 8));
         // Fixes issue with not suggesting hx-* attributes
@@ -162,7 +158,7 @@ mod tests {
     fn test_it_does_not_suggest_when_quote_not_initiated() {
         let text = r##"<div hx-swap= ></div>"##;
 
-        let tree = prepare_tree(&text);
+        let tree = prepare_tree(text);
 
         let expected = get_position(tree.root_node(), text, 0, 13);
         let matches = query_position(tree.root_node(), text, Point::new(0, 13));
@@ -173,9 +169,9 @@ mod tests {
 
     #[test]
     fn test_it_suggests_attr_values_when_starting_quote_value() {
-        let text = r##"<div hx-swap=" ></div>"##;
+        let text = r#"<div hx-swap=" ></div>"#;
 
-        let tree = prepare_tree(&text);
+        let tree = prepare_tree(text);
 
         let matches = query_position(tree.root_node(), text, Point::new(0, 14));
 
@@ -193,9 +189,9 @@ mod tests {
 
     #[test]
     fn test_it_suggests_attr_values_when_open_and_closed_quotes() {
-        let text = r##"<div hx-swap=""></div>"##;
+        let text = r#"<div hx-swap=""></div>"#;
 
-        let tree = prepare_tree(&text);
+        let tree = prepare_tree(text);
 
         let matches = query_position(tree.root_node(), text, Point::new(0, 14));
 
@@ -210,13 +206,13 @@ mod tests {
 
     #[test]
     fn test_it_suggests_attr_values_once_opening_quotes_in_between_tags() {
-        let text = r##"<div id="fa" hx-swap="hx-swap" hx-swap="hx-swap">
+        let text = r#"<div id="fa" hx-swap="hx-swap" hx-swap="hx-swap">
       <span hx-target="
       <button>Click me</button>
     </div>
-    "##;
+    "#;
 
-        let tree = prepare_tree(&text);
+        let tree = prepare_tree(text);
 
         let matches = query_position(tree.root_node(), text, Point::new(1, 23));
 
@@ -234,13 +230,13 @@ mod tests {
 
     #[test]
     fn test_it_suggests_attr_names_for_incomplete_attr_in_between_tags() {
-        let text = r##"<div id="fa" hx-target="this" hx-swap="hx-swap">
+        let text = r#"<div id="fa" hx-target="this" hx-swap="hx-swap">
       <span hx-
       <button>Click me</button>
     </div>
-    "##;
+    "#;
 
-        let tree = prepare_tree(&text);
+        let tree = prepare_tree(text);
 
         let matches = query_position(tree.root_node(), text, Point::new(1, 14));
 
@@ -249,9 +245,9 @@ mod tests {
 
     #[test]
     fn test_it_matches_more_than_one_attribute() {
-        let text = r##"<div hx-get="/foo" hx-target="this" hx- ></div>"##;
+        let text = r#"<div hx-get="/foo" hx-target="this" hx- ></div>"#;
 
-        let tree = prepare_tree(&text);
+        let tree = prepare_tree(text);
 
         let matches = query_position(tree.root_node(), text, Point::new(0, 39));
 
@@ -263,7 +259,7 @@ mod tests {
         let text = r##"<div hx-get="/foo" hx-target="" hx-swap="#swap"></div>
     "##;
 
-        let tree = prepare_tree(&text);
+        let tree = prepare_tree(text);
 
         let matches = query_position(tree.root_node(), text, Point::new(0, 30));
 
@@ -280,7 +276,7 @@ mod tests {
     fn test_it_suggests_attr_values_for_incoplete_quoted_attr_when_in_between_attributes() {
         let text = r##"<div hx-get="/foo" hx-target=" hx-swap="#swap"></div>"##;
 
-        let tree = prepare_tree(&text);
+        let tree = prepare_tree(text);
 
         let matches = query_position(tree.root_node(), text, Point::new(0, 30));
 
@@ -298,7 +294,7 @@ mod tests {
         let text = r##"<div hx-get="/foo" hx- hx-swap="#swap"></div>
         <span class="foo" />"##;
 
-        let tree = prepare_tree(&text);
+        let tree = prepare_tree(text);
 
         let matches = query_position(tree.root_node(), text, Point::new(0, 22));
 
@@ -310,7 +306,7 @@ mod tests {
         let text = r##"<div hx-get="/foo" hx-t hx-swap="#swap"></div>
         <span class="foo" />"##;
 
-        let tree = prepare_tree(&text);
+        let tree = prepare_tree(text);
 
         let matches = query_position(tree.root_node(), text, Point::new(0, 23));
 
@@ -321,7 +317,7 @@ mod tests {
     fn test_it_suggests_values_for_already_filled_attributes() {
         let text = r##"<div hx-get="/foo" hx-target="find " hx-swap="#swap"></div>"##;
 
-        let tree = prepare_tree(&text);
+        let tree = prepare_tree(text);
 
         let matches = query_position(tree.root_node(), text, Point::new(0, 35));
 
@@ -336,9 +332,9 @@ mod tests {
 
     #[test]
     fn test_it_does_not_suggest_when_cursor_isnt_within_a_htmx_attribute() {
-        let text = r##"<div hx-get="/foo"  class="p-4" ></div>"##;
+        let text = r#"<div hx-get="/foo"  class="p-4" ></div>"#;
 
-        let tree = prepare_tree(&text);
+        let tree = prepare_tree(text);
 
         let matches = query_position(tree.root_node(), text, Point::new(0, 19));
 

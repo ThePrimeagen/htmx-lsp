@@ -23,9 +23,8 @@ fn query_props(
     source: &str,
     trigger_point: Point,
 ) -> HashMap<String, CaptureDetails> {
-    let query = Query::new(tree_sitter_html::language(), query_string).expect(&format!(
-        "get_position_by_query invalid query {query_string}"
-    ));
+    let query = Query::new(tree_sitter_html::language(), query_string)
+        .unwrap_or_else(|_| panic!("get_position_by_query invalid query {query_string}"));
     let mut cursor_qry = QueryCursor::new();
 
     let capture_names = query.capture_names();
@@ -36,12 +35,11 @@ fn query_props(
     // trigger point (cursor position)
     matches
         .into_iter()
-        .map(|m| {
+        .flat_map(|m| {
             m.captures
                 .iter()
                 .filter(|capture| capture.node.start_position() <= trigger_point)
         })
-        .flatten()
         .fold(HashMap::new(), |mut acc, capture| {
             let key = capture_names[capture.index as usize].to_owned();
             let value = if let Ok(capture_value) = capture.node.utf8_text(source.as_bytes()) {
@@ -101,7 +99,7 @@ pub fn query_attr_keys_for_completion(
         return None;
     }
 
-    return Some(Position::AttributeName(attr_name.value.to_owned()));
+    Some(Position::AttributeName(attr_name.value.to_owned()))
 }
 
 pub fn query_attr_values_for_completion(
@@ -180,8 +178,8 @@ pub fn query_attr_values_for_completion(
         }
     }
 
-    return Some(Position::AttributeValue {
+    Some(Position::AttributeValue {
         name: attr_name.value.to_owned(),
         value: "".to_string(),
-    });
+    })
 }
