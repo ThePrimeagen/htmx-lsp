@@ -2,6 +2,7 @@ mod handle;
 mod htmx;
 mod text_store;
 mod tree_sitter;
+mod tree_sitter_querier;
 
 use anyhow::Result;
 use htmx::HxCompletion;

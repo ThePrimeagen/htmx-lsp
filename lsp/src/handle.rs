@@ -214,7 +214,7 @@ mod tests {
                 },
                 "position": {
                     "line": 0,
-                    "character": 17
+                    "character": 13
                 }
             }),
         };

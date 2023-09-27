@@ -32,21 +32,20 @@ impl TryFrom<&(PathBuf, String)> for HxCompletion {
     type Error = anyhow::Error;
 
     fn try_from((path, desc): &(PathBuf, String)) -> Result<Self, Self::Error> {
-        let name = path.to_str().unwrap_or("").to_string();
-        if name == "" {
-            return Err(anyhow::anyhow!("Invalid path"));
+        match path.to_str() {
+            None | Some("") => anyhow::bail!("Invalid path"),
+            Some(name) => Ok(Self {
+                name: name.to_string(),
+                desc: desc.to_string(),
+            }),
         }
-        return Ok(Self {
-            name,
-            desc: desc.to_string(),
-        });
     }
 }
 
 pub fn hx_completion(text_params: TextDocumentPositionParams) -> Option<&'static [HxCompletion]> {
     let result = crate::tree_sitter::get_position_from_lsp_completion(text_params.clone())?;
 
-    error!("result: {:?} params: {:?}", result, text_params);
+    debug!("result: {:?} params: {:?}", result, text_params);
 
     match result {
         Position::AttributeName(name) if name.starts_with("hx-") => Some(&HX_TAGS),
