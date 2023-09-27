@@ -186,12 +186,7 @@ pub fn handle_other(msg: Message) -> Option<HtmxResult> {
 mod tests {
     use super::{handle_request, HtmxResult, Request};
     use crate::text_store::TEXT_STORE;
-    use std::sync::Once;
-
-    static SETUP: Once = Once::new();
-    fn prepare_store(file: &str, content: &str) -> () {
-        SETUP.call_once(|| {});
-
+    fn prepare_store(file: &str, content: &str) {
         TEXT_STORE
             .lock()
             .expect("text store mutex poisoned")
