@@ -8,8 +8,8 @@ use anyhow::Result;
 use htmx::HxCompletion;
 use log::{debug, error, info, warn};
 use lsp_types::{
-    CompletionItem, CompletionItemKind, CompletionList, HoverContents, HoverParams,
-    InitializeParams, LanguageString, MarkedString, ServerCapabilities, TextDocumentSyncCapability,
+    CompletionItem, CompletionItemKind, CompletionList, HoverContents, InitializeParams,
+    LanguageString, MarkedString, ServerCapabilities, TextDocumentSyncCapability,
     TextDocumentSyncKind, WorkDoneProgressOptions,
 };
 
@@ -26,27 +26,25 @@ fn to_completion_list(items: Vec<HxCompletion>) -> CompletionList {
         is_incomplete: true,
         items: items
             .iter()
-            .map(|x| {
-                return CompletionItem {
-                    label: x.name.clone(),
-                    label_details: None,
-                    kind: Some(CompletionItemKind::TEXT),
-                    detail: Some(x.desc.clone()),
-                    documentation: None,
-                    deprecated: Some(false),
-                    preselect: None,
-                    sort_text: None,
-                    filter_text: None,
-                    insert_text: None,
-                    insert_text_format: None,
-                    insert_text_mode: None,
-                    text_edit: None,
-                    additional_text_edits: None,
-                    command: None,
-                    commit_characters: None,
-                    data: None,
-                    tags: None,
-                };
+            .map(|x| CompletionItem {
+                label: x.name.clone(),
+                label_details: None,
+                kind: Some(CompletionItemKind::TEXT),
+                detail: Some(x.desc.clone()),
+                documentation: None,
+                deprecated: Some(false),
+                preselect: None,
+                sort_text: None,
+                filter_text: None,
+                insert_text: None,
+                insert_text_format: None,
+                insert_text_mode: None,
+                text_edit: None,
+                additional_text_edits: None,
+                command: None,
+                commit_characters: None,
+                data: None,
+                tags: None,
             })
             .collect(),
     };
@@ -111,7 +109,7 @@ fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
         };
     }
 
-    return Ok(());
+    Ok(())
 }
 
 pub fn start_lsp() -> Result<()> {
@@ -126,7 +124,7 @@ pub fn start_lsp() -> Result<()> {
     let (connection, io_threads) = Connection::stdio();
 
     // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
-    let server_capabilities = serde_json::to_value(&ServerCapabilities {
+    let server_capabilities = serde_json::to_value(ServerCapabilities {
         text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
         completion_provider: Some(lsp_types::CompletionOptions {
             resolve_provider: Some(false),
@@ -171,6 +169,6 @@ mod test {
         assert_eq!(col, 21);
 
         */
-        return Ok(());
+        Ok(())
     }
 }

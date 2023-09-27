@@ -33,5 +33,5 @@ fn main() -> Result<()> {
 
     start_lsp()?;
 
-    return Ok(());
+    Ok(())
 }

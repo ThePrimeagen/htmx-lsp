@@ -16,14 +16,13 @@ pub fn byte_pos_to_line_col(source: &str, byte_pos: usize) -> Position {
         }
     }
 
-    return Position {
+    Position {
         line,
         character: col.saturating_sub(1),
-    };
+    }
 }
 
 pub fn get_text_byte_offset(source: &str, line: usize, character: usize) -> Option<usize> {
-
     let mut character = character;
     let mut line = line;
     let mut byte_offset = 0;
@@ -43,6 +42,5 @@ pub fn get_text_byte_offset(source: &str, line: usize, character: usize) -> Opti
         return None;
     }
 
-    return Some(byte_offset);
+    Some(byte_offset)
 }
-
