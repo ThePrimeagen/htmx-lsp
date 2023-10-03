@@ -17,8 +17,8 @@ structured-logger.workspace = true
 walkdir.workspace = true
 tree-sitter.workspace = true
 tree-sitter-html.workspace = true
-lsp = { version = "0.1.0", path = "./lsp" }
-util = { version = "0.1.0", path = "./util" }
+htmx-lsp-server = { version = "0.1.0", path = "./lsp" }
+htmx-lsp-util = { version = "0.1.0", path = "./util" }
 
 [build-dependencies]
 cc="*"
