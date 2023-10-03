@@ -13,7 +13,7 @@ lsp-types.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 walkdir.workspace = true
-util = { path = "../util" }
+htmx-lsp-util = { version = "0.1", path = "../util" }
 tree-sitter.workspace = true
 tree-sitter-html.workspace = true
 maplit = "1.0.2"
