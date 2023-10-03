@@ -20,8 +20,8 @@ tree-sitter-html.workspace = true
 htmx-lsp-server = { version = "0.1.0", path = "./lsp" }
 htmx-lsp-util = { version = "0.1.0", path = "./util" }
 
-[build-dependencies]
-cc="*"
+# [build-dependencies]
+# cc="*"
 
 [workspace.dependencies]
 tree-sitter = "0.20.10"
