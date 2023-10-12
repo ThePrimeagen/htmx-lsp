@@ -1,21 +1,28 @@
-use lazy_static::lazy_static;
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, OnceLock},
 };
 
 use lsp_types::Url;
 
-type TextStore = HashMap<String, String>;
+pub struct TextStore {
+    pub texts: HashMap<String, String>,
+}
 
-lazy_static! {
-    pub static ref TEXT_STORE: Arc<Mutex<TextStore>> = Arc::new(Mutex::new(HashMap::new()));
+pub static TEXT_STORE: OnceLock<Arc<Mutex<TextStore>>> = OnceLock::new();
+pub fn init_text_store() {
+    _ = TEXT_STORE.set(Arc::new(Mutex::new(TextStore {
+        texts: HashMap::new(),
+    })));
 }
 
 pub fn get_text_document(uri: Url) -> Option<String> {
-    TEXT_STORE
+    return TEXT_STORE
+        .get()
+        .expect("text store not initialized")
         .lock()
         .expect("text store mutex poisoned")
-        .get(uri.as_str())
-        .cloned()
+        .texts
+        .get(&uri.to_string())
+        .cloned();
 }

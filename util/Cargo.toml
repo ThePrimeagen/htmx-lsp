@@ -1,7 +1,9 @@
 [package]
-name = "util"
+name = "htmx-lsp-util"
 version = "0.1.0"
 edition = "2021"
+description = "small utilities for htmx-lsp"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

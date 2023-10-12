@@ -260,15 +260,41 @@ name = "htmx-lsp"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "cc",
  "clap",
+ "htmx-lsp-server",
+ "htmx-lsp-util",
  "log",
- "lsp",
  "structured-logger",
  "tree-sitter",
  "tree-sitter-html",
- "util",
  "walkdir",
+]
+
+[[package]]
+name = "htmx-lsp-server"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "htmx-lsp-util",
+ "lazy_static",
+ "log",
+ "lsp-server",
+ "lsp-types",
+ "maplit",
+ "serde",
+ "serde_json",
+ "tree-sitter",
+ "tree-sitter-html",
+ "walkdir",
+]
+
+[[package]]
+name = "htmx-lsp-util"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "lsp-types",
+ "structured-logger",
 ]
 
 [[package]]
@@ -334,24 +360,6 @@ checksum = "b06a4cde4c0f271a446782e3eff8de789548ce57dbc8eca9292c27f4a42004b4"
 dependencies = [
  "serde",
  "value-bag",
-]
-
-[[package]]
-name = "lsp"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "lazy_static",
- "log",
- "lsp-server",
- "lsp-types",
- "maplit",
- "serde",
- "serde_json",
- "tree-sitter",
- "tree-sitter-html",
- "util",
- "walkdir",
 ]
 
 [[package]]
@@ -787,15 +795,6 @@ name = "utf8parse"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "711b9620af191e0cdc7468a8d14e709c3dcdb115b36f838e601583af800a370a"
-
-[[package]]
-name = "util"
-version = "0.1.0"
-dependencies = [
- "log",
- "lsp-types",
- "structured-logger",
-]
 
 [[package]]
 name = "value-bag"

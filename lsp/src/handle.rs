@@ -1,13 +1,15 @@
 use crate::{
     htmx::{hx_completion, hx_hover, HxCompletion},
     text_store::TEXT_STORE,
-    tree_sitter::{get_position_from_lsp_completion, Position},
 };
 use log::{debug, error, warn};
 use lsp_server::{Message, Notification, Request, RequestId};
 use lsp_types::{CompletionContext, CompletionParams, CompletionTriggerKind};
 
-type Text = String;
+#[derive(serde::Deserialize, Debug)]
+struct Text {
+    text: String,
+}
 
 #[derive(serde::Deserialize, Debug)]
 struct TextDocumentLocation {
@@ -26,6 +28,7 @@ struct TextDocumentChanges {
 #[derive(serde::Deserialize, Debug)]
 struct TextDocumentOpened {
     uri: String,
+
     text: String,
 }
 
@@ -37,14 +40,14 @@ struct TextDocumentOpen {
 
 #[derive(Debug)]
 pub struct HtmxAttributeCompletion {
-    pub items: &'static [HxCompletion],
+    pub items: Vec<HxCompletion>,
     pub id: RequestId,
 }
 
 #[derive(Debug)]
 pub struct HtmxAttributeHoverResult {
     pub id: RequestId,
-    pub value: &'static str,
+    pub value: String,
 }
 
 #[derive(Debug)]
@@ -60,18 +63,21 @@ pub enum HtmxResult {
 fn handle_didChange(noti: Notification) -> Option<HtmxResult> {
     let text_document_changes: TextDocumentChanges = serde_json::from_value(noti.params).ok()?;
     let uri = text_document_changes.text_document.uri;
-    let text = text_document_changes.content_changes[0].clone();
+    let text = text_document_changes.content_changes[0].text.to_string();
 
     if text_document_changes.content_changes.len() > 1 {
         error!("more than one content change, please be wary");
     }
 
     TEXT_STORE
+        .get()
+        .expect("text store not initialized")
         .lock()
         .expect("text store mutex poisoned")
+        .texts
         .insert(uri, text);
 
-    return None;
+    None
 }
 
 #[allow(non_snake_case)]
@@ -86,14 +92,17 @@ fn handle_didOpen(noti: Notification) -> Option<HtmxResult> {
     };
 
     TEXT_STORE
+        .get()
+        .expect("text store not initialized")
         .lock()
         .expect("text store mutex poisoned")
+        .texts
         .insert(
             text_document_changes.uri,
             text_document_changes.text.to_string(),
         );
 
-    return None;
+    None
 }
 
 #[allow(non_snake_case)]
@@ -124,16 +133,16 @@ fn handle_completion(req: Request) -> Option<HtmxResult> {
                 completion.context, items
             );
 
-            return Some(HtmxResult::AttributeCompletion(HtmxAttributeCompletion {
+            Some(HtmxResult::AttributeCompletion(HtmxAttributeCompletion {
                 items,
                 id: req.id,
-            }));
+            }))
         }
         _ => {
             error!("unhandled completion context: {:?}", completion.context);
-            return None;
+            None
         }
-    };
+    }
 }
 
 fn handle_hover(req: Request) -> Option<HtmxResult> {
@@ -148,10 +157,10 @@ fn handle_hover(req: Request) -> Option<HtmxResult> {
 
     debug!("handle_request attribute: {:?}", attribute);
 
-    return Some(HtmxResult::AttributeHover(HtmxAttributeHoverResult {
+    Some(HtmxResult::AttributeHover(HtmxAttributeHoverResult {
         id: req.id,
-        value: &attribute.desc,
-    }));
+        value: attribute.desc,
+    }))
 }
 
 pub fn handle_request(req: Request) -> Option<HtmxResult> {
@@ -179,17 +188,29 @@ pub fn handle_notification(noti: Notification) -> Option<HtmxResult> {
 
 pub fn handle_other(msg: Message) -> Option<HtmxResult> {
     warn!("unhandled message {:?}", msg);
-    return None;
+    None
 }
 
 #[cfg(test)]
 mod tests {
     use super::{handle_request, HtmxResult, Request};
-    use crate::text_store::TEXT_STORE;
+    use crate::htmx;
+    use crate::text_store::{init_text_store, TEXT_STORE};
+    use std::sync::Once;
+
+    static SETUP: Once = Once::new();
     fn prepare_store(file: &str, content: &str) {
+        SETUP.call_once(|| {
+            htmx::init_hx_tags();
+            init_text_store();
+        });
+
         TEXT_STORE
+            .get()
+            .expect("text store not initialized")
             .lock()
             .expect("text store mutex poisoned")
+            .texts
             .insert(file.to_string(), content.to_string());
     }
 

@@ -2,6 +2,10 @@
 name = "htmx-lsp"
 version = "0.1.0"
 edition = "2021"
+description = "A language server for htmx"
+license = "MIT"
+homepage = "https://github.com/ThePrimeagen/htmx-lsp"
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -13,11 +17,11 @@ structured-logger.workspace = true
 walkdir.workspace = true
 tree-sitter.workspace = true
 tree-sitter-html.workspace = true
-lsp = { path = "./lsp" }
-util = { path = "./util" }
+htmx-lsp-server = { version = "0.1.0", path = "./lsp" }
+htmx-lsp-util = { version = "0.1.0", path = "./util" }
 
-[build-dependencies]
-cc="*"
+# [build-dependencies]
+# cc="*"
 
 [workspace.dependencies]
 tree-sitter = "0.20.10"

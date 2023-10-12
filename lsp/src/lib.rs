@@ -8,41 +8,42 @@ use anyhow::Result;
 use htmx::HxCompletion;
 use log::{debug, error, info, warn};
 use lsp_types::{
-    CompletionItem, CompletionItemKind, CompletionList, HoverContents, HoverParams,
-    InitializeParams, LanguageString, MarkedString, ServerCapabilities, TextDocumentSyncCapability,
+    CompletionItem, CompletionItemKind, CompletionList, HoverContents, InitializeParams,
+    LanguageString, MarkedString, ServerCapabilities, TextDocumentSyncCapability,
     TextDocumentSyncKind, WorkDoneProgressOptions,
 };
 
 use lsp_server::{Connection, Message, Response};
 
-use crate::handle::{handle_notification, handle_other, handle_request, HtmxResult};
+use crate::{
+    handle::{handle_notification, handle_other, handle_request, HtmxResult},
+    text_store::init_text_store,
+};
 
-fn to_completion_list(items: &[HxCompletion]) -> CompletionList {
+fn to_completion_list(items: Vec<HxCompletion>) -> CompletionList {
     return CompletionList {
         is_incomplete: true,
         items: items
             .iter()
-            .map(|x| {
-                return CompletionItem {
-                    label: x.name.clone(),
-                    label_details: None,
-                    kind: Some(CompletionItemKind::TEXT),
-                    detail: Some(x.desc.clone()),
-                    documentation: None,
-                    deprecated: Some(false),
-                    preselect: None,
-                    sort_text: None,
-                    filter_text: None,
-                    insert_text: None,
-                    insert_text_format: None,
-                    insert_text_mode: None,
-                    text_edit: None,
-                    additional_text_edits: None,
-                    command: None,
-                    commit_characters: None,
-                    data: None,
-                    tags: None,
-                };
+            .map(|x| CompletionItem {
+                label: x.name.clone(),
+                label_details: None,
+                kind: Some(CompletionItemKind::TEXT),
+                detail: Some(x.desc.clone()),
+                documentation: None,
+                deprecated: Some(false),
+                preselect: None,
+                sort_text: None,
+                filter_text: None,
+                insert_text: None,
+                insert_text_format: None,
+                insert_text_mode: None,
+                text_edit: None,
+                additional_text_edits: None,
+                command: None,
+                commit_characters: None,
+                data: None,
+                tags: None,
             })
             .collect(),
     };
@@ -61,7 +62,7 @@ fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
             _ => handle_other(msg),
         };
 
-        if let Err(e) = match result {
+        match match result {
             Some(HtmxResult::AttributeCompletion(c)) => {
                 let str = match serde_json::to_value(&to_completion_list(c.items)) {
                     Ok(s) => s,
@@ -81,15 +82,18 @@ fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
                 let hover_response = lsp_types::Hover {
                     contents: HoverContents::Scalar(MarkedString::LanguageString(LanguageString {
                         language: "html".to_string(),
-                        value: hover_resp.value.to_string(),
+                        value: hover_resp.value.clone(),
                     })),
                     range: None,
                 };
 
-                let str = serde_json::to_value(&hover_response).map_err(|err| {
-                    error!("Fail to parse hover_response: {:?}", err);
-                    anyhow::anyhow!("Fail to parse hover_response")
-                })?;
+                let str = match serde_json::to_value(&hover_response) {
+                    Ok(s) => s,
+                    Err(err) => {
+                        error!("Fail to parse hover_response: {:?}", err);
+                        return Err(anyhow::anyhow!("Fail to parse hover_response"));
+                    }
+                };
 
                 connection.sender.send(Message::Response(Response {
                     id: hover_resp.id,
@@ -99,14 +103,17 @@ fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
             }
             None => continue,
         } {
-            error!("failed to send response: {:?}", e);
-        }
+            Ok(_) => {}
+            Err(e) => error!("failed to send response: {:?}", e),
+        };
     }
 
     Ok(())
 }
 
 pub fn start_lsp() -> Result<()> {
+    init_text_store();
+
     // Note that  we must have our logging only write out to stderr.
     info!("starting generic LSP server");
 
@@ -115,7 +122,7 @@ pub fn start_lsp() -> Result<()> {
     let (connection, io_threads) = Connection::stdio();
 
     // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
-    let server_capabilities = serde_json::to_value(&ServerCapabilities {
+    let server_capabilities = serde_json::to_value(ServerCapabilities {
         text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
         completion_provider: Some(lsp_types::CompletionOptions {
             resolve_provider: Some(false),
@@ -160,6 +167,6 @@ mod test {
         assert_eq!(col, 21);
 
         */
-        return Ok(());
+        Ok(())
     }
 }

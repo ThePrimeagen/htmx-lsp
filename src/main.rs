@@ -9,7 +9,7 @@ use structured_logger::{json::new_writer, Builder};
 
 use opts::JSPerfLspConfig;
 
-use lsp::start_lsp;
+use htmx_lsp_server::start_lsp;
 
 fn main() -> Result<()> {
     let config = JSPerfLspConfig::parse();
@@ -33,5 +33,5 @@ fn main() -> Result<()> {
 
     start_lsp()?;
 
-    return Ok(());
+    Ok(())
 }

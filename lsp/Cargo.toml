@@ -1,7 +1,9 @@
 [package]
-name = "lsp"
+name = "htmx-lsp-server"
 version = "0.1.0"
 edition = "2021"
+description = "lsp server for htmx-lsp"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -13,7 +15,7 @@ lsp-types.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 walkdir.workspace = true
-util = { path = "../util" }
+htmx-lsp-util = { version = "0.1", path = "../util" }
 tree-sitter.workspace = true
 tree-sitter-html.workspace = true
 maplit = "1.0.2"
