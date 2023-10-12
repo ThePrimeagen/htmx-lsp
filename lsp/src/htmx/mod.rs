@@ -4,7 +4,6 @@ use lsp_types::TextDocumentPositionParams;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf};
 
-
 use crate::tree_sitter::Position;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
