@@ -2,7 +2,7 @@ name: Build & Release
 
 on:
   push:
-    branches: ["master"]
+    branches: ["master", "max/fix-ci-releases"]
 
 permissions:
   contents: write
@@ -74,7 +74,7 @@ jobs:
     name: Release
     runs-on: ubuntu-22.04
     needs: build
-    if: github.ref == 'refs/heads/master'
+    # if: github.ref == 'refs/heads/master'
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -84,20 +84,15 @@ jobs:
       - name: Check if release should be created
         shell: bash
         run: |
-          RELEASE_VERSION=$(awk -F ' = ' '$1 ~ /version/ { gsub(/["]/, "", $2); printf("%s",$2) }' Cargo.toml)
-          latest=$(curl https://api.github.com/repos/ThePrimeagen/htmx-lsp/releases/latest)
+          set -o pipefail
 
-          # no releases, default to 0.0.0
-          if [[ "$latest" == *"Not Found"* ]]; then
-              OLD_VERSION="0.0.0"
-          else
-              OLD_VERSION=$( echo $latest | grep "tag_name" | cut -d'"' -f4 )
-          fi
+          RELEASE_VERSION=$(awk -F ' = ' '$1 ~ /version/ { gsub(/["]/, "", $2); printf("%s",$2) }' Cargo.toml)
+          OLD_VERSION=$( curl -s --fail-with-body https://api.github.com/repos/ThePrimeagen/htmx-lsp/releases/latest | jq -r '.tag_name' )
 
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
           echo "$OLD_VERSION -> $RELEASE_VERSION"
 
-          if [[ "$RELEASE_VERSION" == "$OLD_VERSION" ]]; then
+          if [[ "$RELEASE_VERSION" == "$OLD_VERSION" ]] || ! [[ "$RELEASE_VERSION" =~ ^[0-9]\.[0-9]\.[0-9]$ ]]; then
             echo "SHOULD_RELEASE=no" >> $GITHUB_ENV
           else
             git tag "$RELEASE_VERSION"
@@ -107,18 +102,18 @@ jobs:
 
       - name: Download binaries
         uses: actions/download-artifact@v3
-        if: env.SHOULD_RELEASE == 'yes'
+        # if: env.SHOULD_RELEASE == 'yes'
         with:
           name: built-binaries
           path: bin
 
-      - name: Publish release
-        uses: softprops/action-gh-release@v1
-        if: env.SHOULD_RELEASE == 'yes'
-        with:
-          files: bin/*
-          tag_name: ${{ env.RELEASE_VERSION }}
-          fail_on_unmatched_files: true
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Publish release
+      #   uses: softprops/action-gh-release@v1
+      #   if: env.SHOULD_RELEASE == 'yes'
+      #   with:
+      #     files: bin/*
+      #     tag_name: ${{ env.RELEASE_VERSION }}
+      #     fail_on_unmatched_files: true
+      #     generate_release_notes: true
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
