@@ -2,7 +2,7 @@ name: Build & Release
 
 on:
   push:
-    branches: ["master"]
+    branches: ["master", "max/fix-ci"]
 
 permissions:
   contents: write
@@ -74,7 +74,7 @@ jobs:
     name: Release
     runs-on: ubuntu-22.04
     needs: build
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/DOESNOTEXIST'
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
