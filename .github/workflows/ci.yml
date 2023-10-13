@@ -1,36 +1,35 @@
 name: CI
-on: [push, pull_request]
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
 
 jobs:
   clippy:
+    name: Clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions-rs/toolchain@v1
-        with:
-            toolchain: stable
-            components: clippy
-            override: true
-      - uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - run: cargo clippy -- -D warnings
+      - name: Setup Rust env
+        uses: ./.github/actions/setup-rust-env
+
+      - name: Rust clippy
+        run: cargo clippy -- -D warnings
 
   rustfmt:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Install stable toolchain with rustfmt available
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-          components: rustfmt
+      - name: Setup Rust env
+        uses: ./.github/actions/setup-rust-env
 
-      - run: cargo fmt --check
+      - name: Rust fmt
+        run: cargo fmt --check
 
   test:
     name: Test
