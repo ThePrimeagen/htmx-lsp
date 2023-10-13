@@ -2,7 +2,7 @@ name: Build & Release
 
 on:
   push:
-    branches: ["master", "max/fix-ci"]
+    branches: ["master"]
 
 permissions:
   contents: write
@@ -74,7 +74,7 @@ jobs:
     name: Release
     runs-on: ubuntu-22.04
     needs: build
-    if: github.ref == 'refs/heads/DOESNOTEXIST'
+    if: github.ref == 'refs/heads/master'
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -104,7 +104,6 @@ jobs:
             git push -u origin "$RELEASE_VERSION"
             echo "SHOULD_RELEASE=yes" >> $GITHUB_ENV
           fi
-
 
       - name: Download binaries
         uses: actions/download-artifact@v3
