@@ -74,7 +74,6 @@ fn handle_didChange(noti: Notification) -> Option<HtmxResult> {
         .expect("text store not initialized")
         .lock()
         .expect("text store mutex poisoned")
-        .texts
         .insert(uri, text);
 
     None
@@ -96,11 +95,7 @@ fn handle_didOpen(noti: Notification) -> Option<HtmxResult> {
         .expect("text store not initialized")
         .lock()
         .expect("text store mutex poisoned")
-        .texts
-        .insert(
-            text_document_changes.uri,
-            text_document_changes.text.to_string(),
-        );
+        .insert(text_document_changes.uri, text_document_changes.text);
 
     None
 }
@@ -210,7 +205,6 @@ mod tests {
             .expect("text store not initialized")
             .lock()
             .expect("text store mutex poisoned")
-            .texts
             .insert(file.to_string(), content.to_string());
     }
 
