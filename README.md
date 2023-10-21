@@ -9,9 +9,23 @@ We have reached a point where i could use help!  If you want to fill in document
 * distribute binary
   
 # Integration
-There is no vim or vscode specific integration, but!!! i do have an example of
-launching servers and listening to them for neovim in
-[lsp-debug-tools](https://github.com/ThePrimeagen/lsp-debug-tools.nvim) repo
+
+## Neovim
+`htmx-lsp` can be installed via Mason. And can be configured with `lspconfig`
+
+```lua
+local lspconfig = require('lspconfig')
+-- ...
+lspconfig.htmx.setup{}
+```
+
+## VSCode
+
+No official support as of yet
+
+## Emacs
+
+No official support as of yet
 
 # Help
 Creating the required clients to be used in vscode would be super cool.  If i
