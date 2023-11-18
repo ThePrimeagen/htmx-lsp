@@ -134,7 +134,7 @@ fn handle_completion(req: Request) -> Option<HtmxResult> {
             );
 
             Some(HtmxResult::AttributeCompletion(HtmxAttributeCompletion {
-                items,
+                items: items.to_vec(),
                 id: req.id,
             }))
         }
@@ -159,7 +159,7 @@ fn handle_hover(req: Request) -> Option<HtmxResult> {
 
     Some(HtmxResult::AttributeHover(HtmxAttributeHoverResult {
         id: req.id,
-        value: attribute.desc,
+        value: attribute.desc.to_string(),
     }))
 }
 

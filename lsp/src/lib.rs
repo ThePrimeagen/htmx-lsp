@@ -17,7 +17,6 @@ use lsp_server::{Connection, Message, Response};
 
 use crate::{
     handle::{handle_notification, handle_other, handle_request, HtmxResult},
-    htmx::init_hx_tags,
     text_store::init_text_store,
 };
 
@@ -27,10 +26,10 @@ fn to_completion_list(items: Vec<HxCompletion>) -> CompletionList {
         items: items
             .iter()
             .map(|x| CompletionItem {
-                label: x.name.clone(),
+                label: x.name.to_string(),
                 label_details: None,
                 kind: Some(CompletionItemKind::TEXT),
-                detail: Some(x.desc.clone()),
+                detail: Some(x.desc.to_string()),
                 documentation: None,
                 deprecated: Some(false),
                 preselect: None,
@@ -114,7 +113,6 @@ fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
 
 pub fn start_lsp() -> Result<()> {
     init_text_store();
-    init_hx_tags();
 
     // Note that  we must have our logging only write out to stderr.
     info!("starting generic LSP server");
