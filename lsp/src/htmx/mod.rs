@@ -42,17 +42,17 @@ pub fn hx_completion(text_params: TextDocumentPositionParams) -> Option<&'static
         Position::AttributeValue { name, .. } => {
             let values = HX_ATTRIBUTE_VALUES.get(&name)?;
             let completions = match values {
-                VariadicCompletion::HxSwap(v) => v.as_slice(),
-                VariadicCompletion::HxTarget(v) => v.as_slice(),
-                VariadicCompletion::HxBoost(v) => v.as_slice(),
-                VariadicCompletion::HxExt(v) => v.as_slice(),
-                VariadicCompletion::HxTrigger(v) => v.as_slice(),
-                VariadicCompletion::HxPushUrl(v) => v.as_slice(),
-                VariadicCompletion::HxSwapOob(v) => v.as_slice(),
-                VariadicCompletion::HxHistory(v) => v.as_slice(),
-                VariadicCompletion::HxParams(v) => v.as_slice(),
-                VariadicCompletion::HxReplaceUrl(v) => v.as_slice(),
-                VariadicCompletion::HxSync(v) => v.as_slice(),
+                VariadicCompletion::Swap(v) => v.as_slice(),
+                VariadicCompletion::Target(v) => v.as_slice(),
+                VariadicCompletion::Boost(v) => v.as_slice(),
+                VariadicCompletion::Ext(v) => v.as_slice(),
+                VariadicCompletion::Trigger(v) => v.as_slice(),
+                VariadicCompletion::PushUrl(v) => v.as_slice(),
+                VariadicCompletion::SwapOob(v) => v.as_slice(),
+                VariadicCompletion::History(v) => v.as_slice(),
+                VariadicCompletion::Params(v) => v.as_slice(),
+                VariadicCompletion::ReplaceUrl(v) => v.as_slice(),
+                VariadicCompletion::Sync(v) => v.as_slice(),
             };
             return Some(completions);
         }
@@ -106,20 +106,20 @@ pub static HX_TAGS: &[HxCompletion] = build_completion!(
 );
 
 pub enum VariadicCompletion {
-    HxSwap(&'static [HxCompletion; 8]),
-    HxTarget(&'static [HxCompletion; 5]),
-    HxBoost(&'static [HxCompletion; 2]),
-    HxTrigger(&'static [HxCompletion; 14]),
-    HxExt(&'static [HxCompletion; 22]),
-    HxPushUrl(&'static [HxCompletion; 2]),
-    HxSwapOob(&'static [HxCompletion; 9]),
-    HxHistory(&'static [HxCompletion; 1]),
-    HxParams(&'static [HxCompletion; 3]),
-    HxReplaceUrl(&'static [HxCompletion; 2]),
-    HxSync(&'static [HxCompletion; 4]),
+    Swap(&'static [HxCompletion; 8]),
+    Target(&'static [HxCompletion; 5]),
+    Boost(&'static [HxCompletion; 2]),
+    Trigger(&'static [HxCompletion; 14]),
+    Ext(&'static [HxCompletion; 22]),
+    PushUrl(&'static [HxCompletion; 2]),
+    SwapOob(&'static [HxCompletion; 9]),
+    History(&'static [HxCompletion; 1]),
+    Params(&'static [HxCompletion; 3]),
+    ReplaceUrl(&'static [HxCompletion; 2]),
+    Sync(&'static [HxCompletion; 4]),
 }
 pub static HX_ATTRIBUTE_VALUES: phf::Map<&'static str, VariadicCompletion> = phf::phf_map! {
-    "hx-swap" => VariadicCompletion::HxSwap(
+    "hx-swap" => VariadicCompletion::Swap(
         build_completion!(("innerHTML", "./hx-swap/innerHTML.md"),
         ("outerHTML", "./hx-swap/outerHTML.md"),
         ("afterbegin", "./hx-swap/afterbegin.md"),
@@ -130,7 +130,7 @@ pub static HX_ATTRIBUTE_VALUES: phf::Map<&'static str, VariadicCompletion> = phf
         ("none", "./hx-swap/none.md")
     )),
 
-    "hx-target" => VariadicCompletion::HxTarget(build_completion![
+    "hx-target" => VariadicCompletion::Target(build_completion![
         ("closest", "./hx-target/closest.md"),
         ("find", "./hx-target/find.md"),
         ("next", "./hx-target/next.md"),
@@ -138,12 +138,12 @@ pub static HX_ATTRIBUTE_VALUES: phf::Map<&'static str, VariadicCompletion> = phf
         ("this", "./hx-target/this.md")
     ]),
 
-    "hx-boost" => VariadicCompletion::HxBoost(build_completion![
+    "hx-boost" => VariadicCompletion::Boost(build_completion![
         ("true", "./hx-boost/true.md"),
         ("false", "./hx-boost/false.md")
     ]),
 
-    "hx-trigger" => VariadicCompletion::HxTrigger(build_completion![
+    "hx-trigger" => VariadicCompletion::Trigger(build_completion![
         ("click", "./hx-trigger/click.md"),
         ("once", "./hx-trigger/once.md"),
         ("changed", "./hx-trigger/changed.md"),
@@ -160,7 +160,7 @@ pub static HX_ATTRIBUTE_VALUES: phf::Map<&'static str, VariadicCompletion> = phf
         ("every", "./hx-trigger/every.md")
     ]),
 
-    "hx-ext" => VariadicCompletion::HxExt(build_completion![
+    "hx-ext" => VariadicCompletion::Ext(build_completion![
         ("ajax-header", "./hx-ext/ajax-header.md"),
         ("alpine-morph", "./hx-ext/alpine-morph.md"),
         ("class-tools", "./hx-ext/class-tools.md"),
@@ -185,12 +185,12 @@ pub static HX_ATTRIBUTE_VALUES: phf::Map<&'static str, VariadicCompletion> = phf
         ("ws", "./hx-ext/ws.md")
     ]),
 
-    "hx-push-url" => VariadicCompletion::HxPushUrl(build_completion![
+    "hx-push-url" => VariadicCompletion::PushUrl(build_completion![
         ("true", "./hx-push-url/true.md"),
         ("false", "./hx-push-url/false.md")
     ]),
 
-    "hx-swap-oob" => VariadicCompletion::HxSwapOob(build_completion![
+    "hx-swap-oob" => VariadicCompletion::SwapOob(build_completion![
         ("true", "./hx-swap-oob/true.md"),
         ("innerHTML", "./hx-swap/innerHTML.md"),
         ("outerHTML", "./hx-swap/outerHTML.md"),
@@ -202,22 +202,22 @@ pub static HX_ATTRIBUTE_VALUES: phf::Map<&'static str, VariadicCompletion> = phf
         ("none", "./hx-swap/none.md")
     ]),
 
-    "hx-history" => VariadicCompletion::HxHistory(build_completion![
+    "hx-history" => VariadicCompletion::History(build_completion![
         ("false", "./hx-history/false.md")
     ]),
 
-    "hx-params" => VariadicCompletion::HxParams(build_completion!(
+    "hx-params" => VariadicCompletion::Params(build_completion!(
         ("*", "./hx-params/star.md"),
         ("none", "./hx-params/none.md"),
         ("not", "./hx-params/not.md")
     )),
 
-    "hx-replace-url" => VariadicCompletion::HxReplaceUrl(build_completion![
+    "hx-replace-url" => VariadicCompletion::ReplaceUrl(build_completion![
         ("true", "./hx-replace-url/true.md"),
         ("false", "./hx-replace-url/false.md")
     ]),
 
-    "hx-sync" => VariadicCompletion::HxSync(build_completion![
+    "hx-sync" => VariadicCompletion::Sync(build_completion![
         ("drop", "./hx-sync/drop.md"),
         ("abort", "./hx-sync/abort.md"),
         ("replace", "./hx-sync/replace.md"),
