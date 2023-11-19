@@ -33,32 +33,9 @@ pub fn hx_completion(text_params: TextDocumentPositionParams) -> Option<&'static
     debug!("result: {:?} params: {:?}", result, text_params);
 
     match result {
-        Position::AttributeName(name) => {
-            if name.starts_with("hx-") {
-                return Some(HX_TAGS);
-            }
-        }
-
-        Position::AttributeValue { name, .. } => {
-            let values = HX_ATTRIBUTE_VALUES.get(&name)?;
-            let completions = match values {
-                VariadicCompletion::Swap(v) => v.as_slice(),
-                VariadicCompletion::Target(v) => v.as_slice(),
-                VariadicCompletion::Boost(v) => v.as_slice(),
-                VariadicCompletion::Ext(v) => v.as_slice(),
-                VariadicCompletion::Trigger(v) => v.as_slice(),
-                VariadicCompletion::PushUrl(v) => v.as_slice(),
-                VariadicCompletion::SwapOob(v) => v.as_slice(),
-                VariadicCompletion::History(v) => v.as_slice(),
-                VariadicCompletion::Params(v) => v.as_slice(),
-                VariadicCompletion::ReplaceUrl(v) => v.as_slice(),
-                VariadicCompletion::Sync(v) => v.as_slice(),
-            };
-            return Some(completions);
-        }
-    };
-
-    None
+        Position::AttributeName(name) => name.starts_with("hx-").then_some(HX_TAGS),
+        Position::AttributeValue { name, .. } => HX_ATTRIBUTE_VALUES.get(&name).copied(),
+    }
 }
 
 pub fn hx_hover(text_params: TextDocumentPositionParams) -> Option<HxCompletion> {
@@ -105,21 +82,8 @@ pub static HX_TAGS: &[HxCompletion] = build_completion!(
     ("hx-validate", "./attributes/hx-validate.md")
 );
 
-pub enum VariadicCompletion {
-    Swap(&'static [HxCompletion; 8]),
-    Target(&'static [HxCompletion; 5]),
-    Boost(&'static [HxCompletion; 2]),
-    Trigger(&'static [HxCompletion; 14]),
-    Ext(&'static [HxCompletion; 22]),
-    PushUrl(&'static [HxCompletion; 2]),
-    SwapOob(&'static [HxCompletion; 9]),
-    History(&'static [HxCompletion; 1]),
-    Params(&'static [HxCompletion; 3]),
-    ReplaceUrl(&'static [HxCompletion; 2]),
-    Sync(&'static [HxCompletion; 4]),
-}
-pub static HX_ATTRIBUTE_VALUES: phf::Map<&'static str, VariadicCompletion> = phf::phf_map! {
-    "hx-swap" => VariadicCompletion::Swap(
+pub static HX_ATTRIBUTE_VALUES: phf::Map<&'static str, &[HxCompletion]> = phf::phf_map! {
+    "hx-swap" =>
         build_completion!(("innerHTML", "./hx-swap/innerHTML.md"),
         ("outerHTML", "./hx-swap/outerHTML.md"),
         ("afterbegin", "./hx-swap/afterbegin.md"),
@@ -128,22 +92,22 @@ pub static HX_ATTRIBUTE_VALUES: phf::Map<&'static str, VariadicCompletion> = phf
         ("beforeend", "./hx-swap/beforeend.md"),
         ("delete", "./hx-swap/delete.md"),
         ("none", "./hx-swap/none.md")
-    )),
+    ) as &[_],
 
-    "hx-target" => VariadicCompletion::Target(build_completion![
+    "hx-target" => build_completion![
         ("closest", "./hx-target/closest.md"),
         ("find", "./hx-target/find.md"),
         ("next", "./hx-target/next.md"),
         ("prev", "./hx-target/prev.md"),
         ("this", "./hx-target/this.md")
-    ]),
+    ] as &[_],
 
-    "hx-boost" => VariadicCompletion::Boost(build_completion![
+    "hx-boost" => build_completion![
         ("true", "./hx-boost/true.md"),
         ("false", "./hx-boost/false.md")
-    ]),
+    ] as &[_],
 
-    "hx-trigger" => VariadicCompletion::Trigger(build_completion![
+    "hx-trigger" => build_completion![
         ("click", "./hx-trigger/click.md"),
         ("once", "./hx-trigger/once.md"),
         ("changed", "./hx-trigger/changed.md"),
@@ -158,9 +122,9 @@ pub static HX_ATTRIBUTE_VALUES: phf::Map<&'static str, VariadicCompletion> = phf
         ("revealed", "./hx-trigger/revealed.md"),
         ("intersect", "./hx-trigger/intersect.md"),
         ("every", "./hx-trigger/every.md")
-    ]),
+    ] as &[_],
 
-    "hx-ext" => VariadicCompletion::Ext(build_completion![
+    "hx-ext" => build_completion![
         ("ajax-header", "./hx-ext/ajax-header.md"),
         ("alpine-morph", "./hx-ext/alpine-morph.md"),
         ("class-tools", "./hx-ext/class-tools.md"),
@@ -183,14 +147,14 @@ pub static HX_ATTRIBUTE_VALUES: phf::Map<&'static str, VariadicCompletion> = phf
         ("restored", "./hx-ext/restored.md"),
         ("sse", "./hx-ext/sse.md"),
         ("ws", "./hx-ext/ws.md")
-    ]),
+    ] as &[_],
 
-    "hx-push-url" => VariadicCompletion::PushUrl(build_completion![
+    "hx-push-url" => build_completion![
         ("true", "./hx-push-url/true.md"),
         ("false", "./hx-push-url/false.md")
-    ]),
+    ] as &[_],
 
-    "hx-swap-oob" => VariadicCompletion::SwapOob(build_completion![
+    "hx-swap-oob" => build_completion![
         ("true", "./hx-swap-oob/true.md"),
         ("innerHTML", "./hx-swap/innerHTML.md"),
         ("outerHTML", "./hx-swap/outerHTML.md"),
@@ -200,27 +164,27 @@ pub static HX_ATTRIBUTE_VALUES: phf::Map<&'static str, VariadicCompletion> = phf
         ("beforeend", "./hx-swap/beforeend.md"),
         ("delete", "./hx-swap/delete.md"),
         ("none", "./hx-swap/none.md")
-    ]),
+    ] as &[_],
 
-    "hx-history" => VariadicCompletion::History(build_completion![
+    "hx-history" => build_completion![
         ("false", "./hx-history/false.md")
-    ]),
+    ] as &[_],
 
-    "hx-params" => VariadicCompletion::Params(build_completion!(
+    "hx-params" => build_completion!(
         ("*", "./hx-params/star.md"),
         ("none", "./hx-params/none.md"),
         ("not", "./hx-params/not.md")
-    )),
+    ) as &[_],
 
-    "hx-replace-url" => VariadicCompletion::ReplaceUrl(build_completion![
+    "hx-replace-url" => build_completion![
         ("true", "./hx-replace-url/true.md"),
         ("false", "./hx-replace-url/false.md")
-    ]),
+    ] as &[_],
 
-    "hx-sync" => VariadicCompletion::Sync(build_completion![
+    "hx-sync" => build_completion![
         ("drop", "./hx-sync/drop.md"),
         ("abort", "./hx-sync/abort.md"),
         ("replace", "./hx-sync/replace.md"),
         ("queue", "./hx-sync/queue.md")
-    ])
+    ] as &[_]
 };
