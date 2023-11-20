@@ -115,6 +115,11 @@ pub fn init_hx_tags() {
             ("false", include_str!("./hx-boost/false.md")),
         ]),
 
+        String::from("hx-disabled-elt") => to_hx_completion(vec![
+            ("closest", include_str!("./hx-disabled-elt/closest.md")),
+            ("this", include_str!("./hx-disabled-elt/this.md")),
+        ]),
+
         String::from("hx-trigger") => to_hx_completion(vec![
             ("click", include_str!("./hx-trigger/click.md")),
             ("once", include_str!("./hx-trigger/once.md")),
@@ -220,6 +225,10 @@ pub fn init_hx_tags() {
         ("hx-swap-oob", include_str!("./attributes/hx-swap-oob.md")),
         ("hx-confirm", include_str!("./attributes/hx-confirm.md")),
         ("hx-disable", include_str!("./attributes/hx-disable.md")),
+        (
+            "hx-disabled-elt",
+            include_str!("./attributes/hx-disabled-elt.md"),
+        ),
         ("hx-encoding", include_str!("./attributes/hx-encoding.md")),
         ("hx-headers", include_str!("./attributes/hx-headers.md")),
         ("hx-history", include_str!("./attributes/hx-history.md")),
