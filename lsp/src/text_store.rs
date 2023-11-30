@@ -30,11 +30,11 @@ pub fn init_text_store() {
 }
 
 pub fn get_text_document(uri: Url) -> Option<String> {
-    TEXT_STORE
+    return TEXT_STORE
         .get()
         .expect("text store not initialized")
         .lock()
         .expect("text store mutex poisoned")
         .get(&uri.to_string())
-        .cloned()
+        .cloned();
 }
