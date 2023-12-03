@@ -62,7 +62,7 @@ pub fn hx_completion(text_params: TextDocumentPositionParams) -> Option<Vec<HxCo
 }
 
 pub fn hx_hover(text_params: TextDocumentPositionParams) -> Option<HxCompletion> {
-    let result = crate::tree_sitter::get_position_from_lsp_completion(text_params.clone())?;
+    let result = crate::tree_sitter::get_position_from_lsp_completion(text_params)?;
     debug!("handle_hover result: {:?}", result);
 
     match result {
