@@ -39,7 +39,7 @@ pub fn hx_completion(text_params: TextDocumentPositionParams) -> Option<&'static
 }
 
 pub fn hx_hover(text_params: TextDocumentPositionParams) -> Option<HxCompletion> {
-    let result = crate::tree_sitter::get_position_from_lsp_completion(text_params)?;
+    let result = crate::tree_sitter::get_position_from_lsp_completion(text_params.clone())?;
     debug!("handle_hover result: {:?}", result);
 
     match result {
@@ -68,7 +68,7 @@ pub static HX_TAGS: &[HxCompletion] = build_completion!(
     ("hx-swap-oob", "./attributes/hx-swap-oob.md"),
     ("hx-confirm", "./attributes/hx-confirm.md"),
     ("hx-disable", "./attributes/hx-disable.md"),
-    ("hx-disable-elt", "./attributes/hx-disable-elt.md"),
+    ("hx-disabled-elt", "./attributes/hx-disabled-elt.md"),
     ("hx-encoding", "./attributes/hx-encoding.md"),
     ("hx-headers", "./attributes/hx-headers.md"),
     ("hx-history", "./attributes/hx-history.md"),
@@ -109,7 +109,7 @@ pub static HX_ATTRIBUTE_VALUES: phf::Map<&'static str, &[HxCompletion]> = phf::p
         ("false", "./hx-boost/false.md")
     ] as &[_],
 
-    "hx-disable-elt" => build_completion![
+    "hx-disabled-elt" => build_completion![
         ("closest", "./hx-disabled-elt/closest.md"),
         ("this", "./hx-disabled-elt/this.md")
     ] as &[_],
