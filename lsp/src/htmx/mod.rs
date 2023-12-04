@@ -68,6 +68,7 @@ pub static HX_TAGS: &[HxCompletion] = build_completion!(
     ("hx-swap-oob", "./attributes/hx-swap-oob.md"),
     ("hx-confirm", "./attributes/hx-confirm.md"),
     ("hx-disable", "./attributes/hx-disable.md"),
+    ("hx-disable-elt", "./attributes/hx-disable-elt.md"),
     ("hx-encoding", "./attributes/hx-encoding.md"),
     ("hx-headers", "./attributes/hx-headers.md"),
     ("hx-history", "./attributes/hx-history.md"),
@@ -84,7 +85,8 @@ pub static HX_TAGS: &[HxCompletion] = build_completion!(
 
 pub static HX_ATTRIBUTE_VALUES: phf::Map<&'static str, &[HxCompletion]> = phf::phf_map! {
     "hx-swap" =>
-        build_completion!(("innerHTML", "./hx-swap/innerHTML.md"),
+        build_completion![
+        ("innerHTML", "./hx-swap/innerHTML.md"),
         ("outerHTML", "./hx-swap/outerHTML.md"),
         ("afterbegin", "./hx-swap/afterbegin.md"),
         ("afterend", "./hx-swap/afterend.md"),
@@ -92,7 +94,7 @@ pub static HX_ATTRIBUTE_VALUES: phf::Map<&'static str, &[HxCompletion]> = phf::p
         ("beforeend", "./hx-swap/beforeend.md"),
         ("delete", "./hx-swap/delete.md"),
         ("none", "./hx-swap/none.md")
-    ) as &[_],
+    ] as &[_],
 
     "hx-target" => build_completion![
         ("closest", "./hx-target/closest.md"),
@@ -105,6 +107,11 @@ pub static HX_ATTRIBUTE_VALUES: phf::Map<&'static str, &[HxCompletion]> = phf::p
     "hx-boost" => build_completion![
         ("true", "./hx-boost/true.md"),
         ("false", "./hx-boost/false.md")
+    ] as &[_],
+
+    "hx-disable-elt" => build_completion![
+        ("closest", "./hx-disabled-elt/closest.md"),
+        ("this", "./hx-disabled-elt/this.md"),
     ] as &[_],
 
     "hx-trigger" => build_completion![
