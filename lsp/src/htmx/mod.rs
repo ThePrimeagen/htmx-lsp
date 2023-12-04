@@ -111,7 +111,7 @@ pub static HX_ATTRIBUTE_VALUES: phf::Map<&'static str, &[HxCompletion]> = phf::p
 
     "hx-disable-elt" => build_completion![
         ("closest", "./hx-disabled-elt/closest.md"),
-        ("this", "./hx-disabled-elt/this.md"),
+        ("this", "./hx-disabled-elt/this.md")
     ] as &[_],
 
     "hx-trigger" => build_completion![
