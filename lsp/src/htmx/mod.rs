@@ -1,14 +1,13 @@
 use log::debug;
 use lsp_types::TextDocumentPositionParams;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, path::PathBuf, sync::OnceLock};
 
 use crate::tree_sitter::Position;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HxCompletion {
-    pub name: String,
-    pub desc: String,
+    pub name: &'static str,
+    pub desc: &'static str,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -17,235 +16,182 @@ pub struct HxHover {
     pub desc: String,
 }
 
-impl From<&(&str, &str)> for HxCompletion {
-    fn from((name, desc): &(&str, &str)) -> Self {
-        Self {
-            name: name.to_string(),
-            desc: desc.to_string(),
-        }
-    }
+macro_rules! build_completion {
+    ($(($name:expr, $desc:expr)),*) => {
+        &[
+            $(HxCompletion {
+            name: $name,
+            desc: include_str!($desc),
+            }),*
+        ]
+    };
 }
 
-impl TryFrom<&(PathBuf, String)> for HxCompletion {
-    type Error = anyhow::Error;
-
-    fn try_from((path, desc): &(PathBuf, String)) -> Result<Self, Self::Error> {
-        match path.to_str() {
-            None | Some("") => anyhow::bail!("Invalid path"),
-            Some(name) => Ok(Self {
-                name: name.to_string(),
-                desc: desc.to_string(),
-            }),
-        }
-    }
-}
-
-pub fn hx_completion(text_params: TextDocumentPositionParams) -> Option<Vec<HxCompletion>> {
+pub fn hx_completion(text_params: TextDocumentPositionParams) -> Option<&'static [HxCompletion]> {
     let result = crate::tree_sitter::get_position_from_lsp_completion(text_params.clone())?;
 
     debug!("result: {:?} params: {:?}", result, text_params);
 
     match result {
-        Position::AttributeName(name) => {
-            if name.starts_with("hx-") {
-                return HX_TAGS.get().cloned();
-            }
-        }
-
-        Position::AttributeValue { name, .. } => {
-            let values = HX_ATTRIBUTE_VALUES.get()?.get(&name)?;
-            return Some(values.clone());
-        }
-    };
-
-    None
-}
-
-pub fn hx_hover(text_params: TextDocumentPositionParams) -> Option<HxCompletion> {
-    let result = crate::tree_sitter::get_position_from_lsp_completion(text_params)?;
-    debug!("handle_hover result: {:?}", result);
-
-    match result {
-        Position::AttributeName(name) => HX_TAGS
-            .get()
-            .expect("Why it can't get HX_TAGS?")
-            .iter()
-            .find(|x| x.name == name)
-            .cloned(),
-
-        Position::AttributeValue { name, .. } => HX_TAGS
-            .get()
-            .expect("Why it can't get HX_TAGS?")
-            .iter()
-            .find(|x| x.name == name)
-            .cloned(),
+        Position::AttributeName(name) => name.starts_with("hx-").then_some(HX_TAGS),
+        Position::AttributeValue { name, .. } => HX_ATTRIBUTE_VALUES.get(&name).copied(),
     }
 }
 
-pub static HX_TAGS: OnceLock<Vec<HxCompletion>> = OnceLock::new();
-pub static HX_ATTRIBUTE_VALUES: OnceLock<HashMap<String, Vec<HxCompletion>>> = OnceLock::new();
+pub fn hx_hover(text_params: TextDocumentPositionParams) -> Option<HxCompletion> {
+    let result = crate::tree_sitter::get_position_from_lsp_completion(text_params.clone())?;
+    debug!("handle_hover result: {:?}", result);
 
-fn to_hx_completion(values: Vec<(&str, &str)>) -> Vec<HxCompletion> {
-    return values.iter().filter_map(|x| x.try_into().ok()).collect();
+    match result {
+        Position::AttributeName(name) => HX_TAGS.iter().find(|x| x.name == name).cloned(),
+        Position::AttributeValue { name, .. } => HX_TAGS.iter().find(|x| x.name == name).cloned(),
+    }
 }
 
-pub fn init_hx_tags() {
-    _ = HX_ATTRIBUTE_VALUES.set(maplit::hashmap! {
-        String::from("hx-swap") => to_hx_completion(vec![
-            ("innerHTML", include_str!("./hx-swap/innerHTML.md")),
-            ("outerHTML", include_str!("./hx-swap/outerHTML.md")),
-            ("afterbegin", include_str!("./hx-swap/afterbegin.md")),
-            ("afterend", include_str!("./hx-swap/afterend.md")),
-            ("beforebegin", include_str!("./hx-swap/beforebegin.md")),
-            ("beforeend", include_str!("./hx-swap/beforeend.md")),
-            ("delete", include_str!("./hx-swap/delete.md")),
-            ("none", include_str!("./hx-swap/none.md")),
-        ]),
+pub static HX_TAGS: &[HxCompletion] = build_completion!(
+    ("hx-boost", "./attributes/hx-boost.md"),
+    ("hx-delete", "./attributes/hx-delete.md"),
+    ("hx-get", "./attributes/hx-get.md"),
+    ("hx-include", "./attributes/hx-include.md"),
+    ("hx-patch", "./attributes/hx-patch.md"),
+    ("hx-post", "./attributes/hx-post.md"),
+    ("hx-put", "./attributes/hx-put.md"),
+    ("hx-swap", "./attributes/hx-swap.md"),
+    ("hx-target", "./attributes/hx-target.md"),
+    ("hx-trigger", "./attributes/hx-trigger.md"),
+    ("hx-vals", "./attributes/hx-vals.md"),
+    ("hx-push-url", "./attributes/hx-push-url.md"),
+    ("hx-select", "./attributes/hx-select.md"),
+    ("hx-ext", "./attributes/hx-ext.md"),
+    ("hx-on", "./attributes/hx-on.md"),
+    ("hx-select-oob", "./attributes/hx-select-oob.md"),
+    ("hx-swap-oob", "./attributes/hx-swap-oob.md"),
+    ("hx-confirm", "./attributes/hx-confirm.md"),
+    ("hx-disable", "./attributes/hx-disable.md"),
+    ("hx-disabled-elt", "./attributes/hx-disabled-elt.md"),
+    ("hx-encoding", "./attributes/hx-encoding.md"),
+    ("hx-headers", "./attributes/hx-headers.md"),
+    ("hx-history", "./attributes/hx-history.md"),
+    ("hx-history-elt", "./attributes/hx-history-elt.md"),
+    ("hx-indicator", "./attributes/hx-indicator.md"),
+    ("hx-params", "./attributes/hx-params.md"),
+    ("hx-preserve", "./attributes/hx-preserve.md"),
+    ("hx-prompt", "./attributes/hx-prompt.md"),
+    ("hx-replace-url", "./attributes/hx-replace-url.md"),
+    ("hx-request", "./attributes/hx-request.md"),
+    ("hx-sync", "./attributes/hx-sync.md"),
+    ("hx-validate", "./attributes/hx-validate.md")
+);
 
-        String::from("hx-target") => to_hx_completion(vec![
-            ("closest", include_str!("./hx-target/closest.md")),
-            ("find", include_str!("./hx-target/find.md")),
-            ("next", include_str!("./hx-target/next.md")),
-            ("prev", include_str!("./hx-target/prev.md")),
-            ("this", include_str!("./hx-target/this.md")),
-        ]),
+pub static HX_ATTRIBUTE_VALUES: phf::Map<&'static str, &[HxCompletion]> = phf::phf_map! {
+    "hx-swap" =>
+        build_completion![
+        ("innerHTML", "./hx-swap/innerHTML.md"),
+        ("outerHTML", "./hx-swap/outerHTML.md"),
+        ("afterbegin", "./hx-swap/afterbegin.md"),
+        ("afterend", "./hx-swap/afterend.md"),
+        ("beforebegin", "./hx-swap/beforebegin.md"),
+        ("beforeend", "./hx-swap/beforeend.md"),
+        ("delete", "./hx-swap/delete.md"),
+        ("none", "./hx-swap/none.md")
+    ] as &[_],
 
-        String::from("hx-boost") => to_hx_completion(vec![
-            ("true", include_str!("./hx-boost/true.md")),
-            ("false", include_str!("./hx-boost/false.md")),
-        ]),
+    "hx-target" => build_completion![
+        ("closest", "./hx-target/closest.md"),
+        ("find", "./hx-target/find.md"),
+        ("next", "./hx-target/next.md"),
+        ("prev", "./hx-target/prev.md"),
+        ("this", "./hx-target/this.md")
+    ] as &[_],
 
-        String::from("hx-disabled-elt") => to_hx_completion(vec![
-            ("closest", include_str!("./hx-disabled-elt/closest.md")),
-            ("this", include_str!("./hx-disabled-elt/this.md")),
-        ]),
+    "hx-boost" => build_completion![
+        ("true", "./hx-boost/true.md"),
+        ("false", "./hx-boost/false.md")
+    ] as &[_],
 
-        String::from("hx-trigger") => to_hx_completion(vec![
-            ("click", include_str!("./hx-trigger/click.md")),
-            ("once", include_str!("./hx-trigger/once.md")),
-            ("changed", include_str!("./hx-trigger/changed.md")),
-            ("delay:", include_str!("./hx-trigger/delay.md")),
-            ("throttle:", include_str!("./hx-trigger/throttle.md")),
-            ("from:", include_str!("./hx-trigger/from.md")),
-            ("target:", include_str!("./hx-trigger/target.md")),
-            ("consume", include_str!("./hx-trigger/consume.md")),
-            ("queue:", include_str!("./hx-trigger/queue.md")),
-            ("keyup", include_str!("./hx-trigger/keyup.md")),
-            ("load", include_str!("./hx-trigger/load.md")),
-            ("revealed", include_str!("./hx-trigger/revealed.md")),
-            ("intersect", include_str!("./hx-trigger/intersect.md")),
-            ("every", include_str!("./hx-trigger/every.md")),
-        ]),
+    "hx-disabled-elt" => build_completion![
+        ("closest", "./hx-disabled-elt/closest.md"),
+        ("this", "./hx-disabled-elt/this.md")
+    ] as &[_],
 
-        String::from("hx-ext") => to_hx_completion(vec![
-            ("ajax-header", include_str!("./hx-ext/ajax-header.md")),
-            ("alpine-morph", include_str!("./hx-ext/alpine-morph.md")),
-            ("class-tools", include_str!("./hx-ext/class-tools.md")),
-            ("client-side-templates", include_str!("./hx-ext/client-side-templates.md")),
-            ("debug", include_str!("./hx-ext/debug.md")),
-            ("disable-element", include_str!("./hx-ext/disable-element.md")),
-            ("event-header", include_str!("./hx-ext/event-header.md")),
-            ("head-support", include_str!("./hx-ext/head-support.md")),
-            ("include-vals", include_str!("./hx-ext/include-vals.md")),
-            ("json-enc", include_str!("./hx-ext/json-enc.md")),
-            ("morph", include_str!("./hx-ext/morph.md")),
-            ("loading-states", include_str!("./hx-ext/loading-states.md")),
-            ("method-override", include_str!("./hx-ext/method-override.md")),
-            ("morphdom-swap", include_str!("./hx-ext/morphdom-swap.md")),
-            ("multi-swap", include_str!("./hx-ext/multi-swap.md")),
-            ("path-deps", include_str!("./hx-ext/path-deps.md")),
-            ("preload", include_str!("./hx-ext/preload.md")),
-            ("remove-me", include_str!("./hx-ext/remove-me.md")),
-            ("response-targets", include_str!("./hx-ext/response-targets.md")),
-            ("restored", include_str!("./hx-ext/restored.md")),
-            ("sse", include_str!("./hx-ext/sse.md")),
-            ("ws", include_str!("./hx-ext/ws.md")),
-        ]),
+    "hx-trigger" => build_completion![
+        ("click", "./hx-trigger/click.md"),
+        ("once", "./hx-trigger/once.md"),
+        ("changed", "./hx-trigger/changed.md"),
+        ("delay:", "./hx-trigger/delay.md"),
+        ("throttle:", "./hx-trigger/throttle.md"),
+        ("from:", "./hx-trigger/from.md"),
+        ("target:", "./hx-trigger/target.md"),
+        ("consume", "./hx-trigger/consume.md"),
+        ("queue:", "./hx-trigger/queue.md"),
+        ("keyup", "./hx-trigger/keyup.md"),
+        ("load", "./hx-trigger/load.md"),
+        ("revealed", "./hx-trigger/revealed.md"),
+        ("intersect", "./hx-trigger/intersect.md"),
+        ("every", "./hx-trigger/every.md")
+    ] as &[_],
 
-        String::from("hx-push-url") => to_hx_completion(vec![
-            ("true", include_str!("./hx-push-url/true.md")),
-            ("false", include_str!("./hx-push-url/false.md")),
-        ]),
+    "hx-ext" => build_completion![
+        ("ajax-header", "./hx-ext/ajax-header.md"),
+        ("alpine-morph", "./hx-ext/alpine-morph.md"),
+        ("class-tools", "./hx-ext/class-tools.md"),
+        ("client-side-templates", "./hx-ext/client-side-templates.md"),
+        ("debug", "./hx-ext/debug.md"),
+        ("disable-element", "./hx-ext/disable-element.md"),
+        ("event-header", "./hx-ext/event-header.md"),
+        ("head-support", "./hx-ext/head-support.md"),
+        ("include-vals", "./hx-ext/include-vals.md"),
+        ("json-enc", "./hx-ext/json-enc.md"),
+        ("morph", "./hx-ext/morph.md"),
+        ("loading-states", "./hx-ext/loading-states.md"),
+        ("method-override", "./hx-ext/method-override.md"),
+        ("morphdom-swap", "./hx-ext/morphdom-swap.md"),
+        ("multi-swap", "./hx-ext/multi-swap.md"),
+        ("path-deps", "./hx-ext/path-deps.md"),
+        ("preload", "./hx-ext/preload.md"),
+        ("remove-me", "./hx-ext/remove-me.md"),
+        ("response-targets", "./hx-ext/response-targets.md"),
+        ("restored", "./hx-ext/restored.md"),
+        ("sse", "./hx-ext/sse.md"),
+        ("ws", "./hx-ext/ws.md")
+    ] as &[_],
 
-        String::from("hx-swap-oob") => to_hx_completion(vec![
-            ("true", include_str!("./hx-swap-oob/true.md")),
-            ("innerHTML", include_str!("./hx-swap/innerHTML.md")),
-            ("outerHTML", include_str!("./hx-swap/outerHTML.md")),
-            ("afterbegin", include_str!("./hx-swap/afterbegin.md")),
-            ("afterend", include_str!("./hx-swap/afterend.md")),
-            ("beforebegin", include_str!("./hx-swap/beforebegin.md")),
-            ("beforeend", include_str!("./hx-swap/beforeend.md")),
-            ("delete", include_str!("./hx-swap/delete.md")),
-            ("none", include_str!("./hx-swap/none.md")),
-        ]),
+    "hx-push-url" => build_completion![
+        ("true", "./hx-push-url/true.md"),
+        ("false", "./hx-push-url/false.md")
+    ] as &[_],
 
-        String::from("hx-history") => to_hx_completion(vec![
-            ("false", include_str!("./hx-history/false.md")),
-        ]),
+    "hx-swap-oob" => build_completion![
+        ("true", "./hx-swap-oob/true.md"),
+        ("innerHTML", "./hx-swap/innerHTML.md"),
+        ("outerHTML", "./hx-swap/outerHTML.md"),
+        ("afterbegin", "./hx-swap/afterbegin.md"),
+        ("afterend", "./hx-swap/afterend.md"),
+        ("beforebegin", "./hx-swap/beforebegin.md"),
+        ("beforeend", "./hx-swap/beforeend.md"),
+        ("delete", "./hx-swap/delete.md"),
+        ("none", "./hx-swap/none.md")
+    ] as &[_],
 
-        String::from("hx-params") => to_hx_completion(vec![
-            ("*", include_str!("./hx-params/star.md")),
-            ("none", include_str!("./hx-params/none.md")),
-            ("not", include_str!("./hx-params/not.md")),
-        ]),
+    "hx-history" => build_completion![
+        ("false", "./hx-history/false.md")
+    ] as &[_],
 
-        String::from("hx-replace-url") => to_hx_completion(vec![
-            ("true", include_str!("./hx-replace-url/true.md")),
-            ("false", include_str!("./hx-replace-url/false.md")),
-        ]),
+    "hx-params" => build_completion!(
+        ("*", "./hx-params/star.md"),
+        ("none", "./hx-params/none.md"),
+        ("not", "./hx-params/not.md")
+    ) as &[_],
 
-        String::from("hx-sync") => to_hx_completion(vec![
-            ("drop", include_str!("./hx-sync/drop.md")),
-            ("abort", include_str!("./hx-sync/abort.md")),
-            ("replace", include_str!("./hx-sync/replace.md")),
-            ("queue", include_str!("./hx-sync/queue.md")),
-        ])
-    });
+    "hx-replace-url" => build_completion![
+        ("true", "./hx-replace-url/true.md"),
+        ("false", "./hx-replace-url/false.md")
+    ] as &[_],
 
-    _ = HX_TAGS.set(to_hx_completion(vec![
-        ("hx-boost", include_str!("./attributes/hx-boost.md")),
-        ("hx-delete", include_str!("./attributes/hx-delete.md")),
-        ("hx-get", include_str!("./attributes/hx-get.md")),
-        ("hx-include", include_str!("./attributes/hx-include.md")),
-        ("hx-patch", include_str!("./attributes/hx-patch.md")),
-        ("hx-post", include_str!("./attributes/hx-post.md")),
-        ("hx-put", include_str!("./attributes/hx-put.md")),
-        ("hx-swap", include_str!("./attributes/hx-swap.md")),
-        ("hx-target", include_str!("./attributes/hx-target.md")),
-        ("hx-trigger", include_str!("./attributes/hx-trigger.md")),
-        ("hx-vals", include_str!("./attributes/hx-vals.md")),
-        ("hx-push-url", include_str!("./attributes/hx-push-url.md")),
-        ("hx-select", include_str!("./attributes/hx-select.md")),
-        ("hx-ext", include_str!("./attributes/hx-ext.md")),
-        ("hx-on", include_str!("./attributes/hx-on.md")),
-        (
-            "hx-select-oob",
-            include_str!("./attributes/hx-select-oob.md"),
-        ),
-        ("hx-swap-oob", include_str!("./attributes/hx-swap-oob.md")),
-        ("hx-confirm", include_str!("./attributes/hx-confirm.md")),
-        ("hx-disable", include_str!("./attributes/hx-disable.md")),
-        (
-            "hx-disabled-elt",
-            include_str!("./attributes/hx-disabled-elt.md"),
-        ),
-        ("hx-encoding", include_str!("./attributes/hx-encoding.md")),
-        ("hx-headers", include_str!("./attributes/hx-headers.md")),
-        ("hx-history", include_str!("./attributes/hx-history.md")),
-        (
-            "hx-history-elt",
-            include_str!("./attributes/hx-history-elt.md"),
-        ),
-        ("hx-indicator", include_str!("./attributes/hx-indicator.md")),
-        ("hx-params", include_str!("./attributes/hx-params.md")),
-        ("hx-preserve", include_str!("./attributes/hx-preserve.md")),
-        ("hx-prompt", include_str!("./attributes/hx-prompt.md")),
-        (
-            "hx-replace-url",
-            include_str!("./attributes/hx-replace-url.md"),
-        ),
-        ("hx-request", include_str!("./attributes/hx-request.md")),
-        ("hx-sync", include_str!("./attributes/hx-sync.md")),
-        ("hx-validate", include_str!("./attributes/hx-validate.md")),
-    ]));
-}
+    "hx-sync" => build_completion![
+        ("drop", "./hx-sync/drop.md"),
+        ("abort", "./hx-sync/abort.md"),
+        ("replace", "./hx-sync/replace.md"),
+        ("queue", "./hx-sync/queue.md")
+    ] as &[_]
+};

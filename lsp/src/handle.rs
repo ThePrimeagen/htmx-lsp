@@ -129,7 +129,7 @@ fn handle_completion(req: Request) -> Option<HtmxResult> {
             );
 
             Some(HtmxResult::AttributeCompletion(HtmxAttributeCompletion {
-                items,
+                items: items.to_vec(),
                 id: req.id,
             }))
         }
@@ -154,7 +154,7 @@ fn handle_hover(req: Request) -> Option<HtmxResult> {
 
     Some(HtmxResult::AttributeHover(HtmxAttributeHoverResult {
         id: req.id,
-        value: attribute.desc,
+        value: attribute.desc.to_string(),
     }))
 }
 
@@ -189,14 +189,12 @@ pub fn handle_other(msg: Message) -> Option<HtmxResult> {
 #[cfg(test)]
 mod tests {
     use super::{handle_request, HtmxResult, Request};
-    use crate::htmx;
     use crate::text_store::{init_text_store, TEXT_STORE};
     use std::sync::Once;
 
     static SETUP: Once = Once::new();
     fn prepare_store(file: &str, content: &str) {
         SETUP.call_once(|| {
-            htmx::init_hx_tags();
             init_text_store();
         });
 
