@@ -1,6 +1,6 @@
 [package]
 name = "htmx-lsp"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "A language server for htmx"
 license = "MIT"
@@ -10,34 +10,25 @@ homepage = "https://github.com/ThePrimeagen/htmx-lsp"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow.workspace = true
-clap.workspace = true
-log.workspace = true
-structured-logger.workspace = true
-walkdir.workspace = true
-tree-sitter.workspace = true
-tree-sitter-html.workspace = true
-htmx-lsp-server = { version = "0.1.0", path = "./lsp" }
-htmx-lsp-util = { version = "0.1.0", path = "./util" }
-
-# [build-dependencies]
-# cc="*"
-
-[workspace.dependencies]
+env_logger = "0.9.0"
+ropey = "1.5.0"
+serde_json = "1.0.78"
+tokio = { version = "1.17.0", features = ["full", "sync"] }
+tower-lsp = { version = "0.19.0", features = ["proposed"]}
+serde = { version = "1.0", features = ["derive"] }
+dashmap = "5.1.0"
+log = "0.4.14"
 tree-sitter = "0.20.10"
 tree-sitter-html = "0.19.0"
-walkdir = "2.3.3"
-anyhow = "1.0.72"
-clap = { version = "4.3.17", features = ["derive", "env"] }
-log = { version = "0.4.19", features = ["kv_unstable", "kv_unstable_serde"] }
-lsp-server = "0.7.2"
-lsp-types = "0.94.0"
-serde = { version = "1.0.173", features = ["derive"] }
-serde_json = "1.0.103"
-structured-logger = "1.0.1"
+tree-sitter-rust = "0.20.4"
+walkdir = "2.4.0"
+anyhow = "1.0.75"
+thiserror = "1.0.50"
+tree-sitter-javascript = "0.20.1"
 
-[workspace]
-members = [
-    "lsp",
-    "util",
-]
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+strip = true
+opt-level = 3
