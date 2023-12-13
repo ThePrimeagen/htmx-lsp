@@ -110,6 +110,12 @@ pub static HX_JS_TAGS: &str = r#"
           (comment) @hx_comment
         )
       ) 
+
+      (method_definition
+        (statement_block
+            (comment) @hx_comment
+        )
+      )
     ]
     
     (#match? @hx_comment " hx@")
@@ -139,4 +145,26 @@ pub static HX_ANY_HTML: &str = r#"
     
     (#match? @attr_name "NAME")
 )
+"#;
+
+pub static HX_PYTHON_TAGS: &str = r#"
+(
+	(comment) @hx_comment
+)
+"#;
+
+pub static HX_GO_TAGS: &str = r#"
+
+(
+	[
+   		(function_declaration
+        	(block
+            	(comment) @hx_comment
+            )
+        )
+    ]
+    
+	(#match? @hx_comment " hx@")
+)
+	    
 "#;

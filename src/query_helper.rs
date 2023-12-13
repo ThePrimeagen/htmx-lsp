@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
 use tree_sitter::{Node, Point, Query, QueryCursor};
 
@@ -6,13 +6,22 @@ use crate::{
     htmx_tags::{get_tag, get_tags, Tag},
     init_hx::LangType,
     position::{CaptureDetails, Position, PositionDefinition, QueryType},
-    queries::{HX_ANY_HTML, HX_HTML, HX_JS_TAGS, HX_NAME, HX_RUST_TAGS, HX_VALUE},
+    queries::{
+        HX_ANY_HTML, HX_GO_TAGS, HX_HTML, HX_JS_TAGS, HX_NAME, HX_PYTHON_TAGS, HX_RUST_TAGS,
+        HX_VALUE,
+    },
 };
 
 pub struct Queries {
     pub html: HTMLQueries,
     pub javascript: Query,
     pub backend: Query,
+}
+
+impl Clone for Queries {
+    fn clone(&self) -> Self {
+        Self::default()
+    }
 }
 
 impl Default for Queries {
@@ -31,6 +40,17 @@ impl Queries {
             HtmxQuery::Html(html) => self.html.get(html),
             HtmxQuery::JavaScript => &self.javascript,
             HtmxQuery::Backend => &self.backend,
+        }
+    }
+
+    pub fn change_backend(&mut self, lang: &str) {
+        let lang = match lang {
+            "python" => Some((tree_sitter_python::language(), HX_PYTHON_TAGS)),
+            "go" => Some((tree_sitter_go::language(), HX_GO_TAGS)),
+            _ => None,
+        };
+        if let Some(lang) = lang {
+            self.backend = Query::new(lang.0, lang.1).unwrap();
         }
     }
 }

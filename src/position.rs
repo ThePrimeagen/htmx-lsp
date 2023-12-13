@@ -200,12 +200,23 @@ mod tests1 {
     use tree_sitter::{Parser, Point};
 
     use crate::{
-        position::{query_position, Position, QueryType},
-        query_helper::HTMLQueries,
+        position::{find_element_referent_to_current_node, query_position, Position, QueryType},
+        query_helper::{query_props, HTMLQueries, Queries},
     };
 
     fn prepare_tree(text: &str) -> tree_sitter::Tree {
         let language = tree_sitter_html::language();
+        let mut parser = Parser::new();
+
+        parser
+            .set_language(language)
+            .expect("could not load html grammer");
+
+        parser.parse(text, None).expect("not to fail")
+    }
+
+    fn prepare_python_tree(text: &str) -> tree_sitter::Tree {
+        let language = tree_sitter_python::language();
         let mut parser = Parser::new();
 
         parser
@@ -568,6 +579,25 @@ mod tests1 {
             assert_eq!(matches, Some(Position::AttributeName(String::from("--"))));
             // assert_eq!(matches, case.2);
         }
+    }
+
+    #[test]
+    fn python_tags() {
+        let case = r#"
+def a():
+    # hx@hello
+    # hx@world
+    print("hello world")
+    # hx@hello_world
+        "#;
+        let tree = prepare_python_tree(case);
+        let trigger_point = Point::new(0, 0);
+        let closest_node = tree.root_node();
+        let mut query = Queries::default();
+        query.change_backend("python");
+        let query = &query.backend;
+        let props = query_props(closest_node, case, trigger_point, query, true);
+        assert_eq!(props.len(), 3);
     }
 }
 

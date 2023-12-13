@@ -38,7 +38,7 @@ pub fn get_tag(line: &str) -> Option<Tag> {
 }
 
 pub fn get_tags(value: &str, mut start_char: usize, line: usize) -> Option<Vec<Tag>> {
-    if value.starts_with(' ') || value.contains("  ") {
+    if value.starts_with(' ') || value.contains("  ") || value.is_empty() {
         return None;
     }
     let mut tags = vec![];

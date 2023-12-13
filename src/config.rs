@@ -26,6 +26,7 @@ impl HtmxConfig {
         match self.lang.as_str() {
             "rust" => ext == "rs",
             "python" => ext == "py",
+            "go" => ext == "go",
             _ => false,
         }
     }
@@ -41,6 +42,10 @@ impl HtmxConfig {
             None => None,
         }
     }
+
+    pub fn is_supported_backend(&self) -> bool {
+        matches!(self.lang.as_str(), "python" | "rust" | "go")
+    }
 }
 
 pub fn validate_config(config: Option<Value>) -> Option<HtmxConfig> {
@@ -55,14 +60,14 @@ pub fn validate_config(config: Option<Value>) -> Option<HtmxConfig> {
 pub fn read_config(
     config: &RwLock<Option<HtmxConfig>>,
     lsp_files: &Arc<Mutex<LspFiles>>,
-    queries: &Queries,
+    queries: &Arc<Mutex<Queries>>,
     document_map: &DashMap<String, Rope>,
 ) -> Result<Vec<Tag>, ConfigError> {
     if let Ok(config) = config.read() {
         if let Some(config) = config.as_ref().filter(|_| true) {
             if config.template_ext.is_empty() || config.template_ext.contains(' ') {
                 return Err(ConfigError::TemplateExtension);
-            } else if config.lang != "rust" {
+            } else if !config.is_supported_backend() {
                 return Err(ConfigError::LanguageSupport(String::from(&config.lang)));
             }
             walkdir(config, lsp_files, queries, document_map)
@@ -77,15 +82,23 @@ pub fn read_config(
 fn walkdir(
     config: &HtmxConfig,
     lsp_files: &Arc<Mutex<LspFiles>>,
-    queries: &Queries,
+    queries: &Arc<Mutex<Queries>>,
     document_map: &DashMap<String, Rope>,
 ) -> Result<Vec<Tag>, ConfigError> {
     let lsp_files = lsp_files.lock().unwrap();
     let mut diagnostics = vec![];
     lsp_files.reset();
     let directories = [&config.templates, &config.js_tags, &config.backend_tags];
+    let _ = queries.lock().is_ok_and(|mut queries| {
+        queries.change_backend(&config.lang);
+        true
+    });
     for (index, dir) in directories.iter().enumerate() {
         let lang_type = LangType::from(index);
+        let _ = lsp_files.parsers.lock().is_ok_and(|mut parsers| {
+            parsers.change_backend(&config.lang, lang_type);
+            true
+        });
         for file in dir.iter() {
             for entry in walkdir::WalkDir::new(file) {
                 if let Ok(entry) = &entry {
@@ -96,15 +109,18 @@ fn walkdir(
                             if !ext.is_some_and(|t| t == lang_type) {
                                 continue;
                             }
-                            add_file(
-                                path,
-                                &lsp_files,
-                                lang_type,
-                                queries,
-                                &mut diagnostics,
-                                false,
-                                document_map,
-                            );
+                            let _ = queries.lock().is_ok_and(|queries| {
+                                add_file(
+                                    path,
+                                    &lsp_files,
+                                    lang_type,
+                                    &queries,
+                                    &mut diagnostics,
+                                    false,
+                                    document_map,
+                                );
+                                true
+                            });
                         }
                     }
                 } else {

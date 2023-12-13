@@ -2,10 +2,6 @@
 name = "htmx-lsp"
 version = "0.1.1"
 edition = "2021"
-description = "A language server for htmx"
-license = "MIT"
-homepage = "https://github.com/ThePrimeagen/htmx-lsp"
-
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -25,6 +21,8 @@ walkdir = "2.4.0"
 anyhow = "1.0.75"
 thiserror = "1.0.50"
 tree-sitter-javascript = "0.20.1"
+tree-sitter-python = "0.20.4"
+tree-sitter-go = "0.20.0"
 
 [profile.dev]
 opt-level = 1

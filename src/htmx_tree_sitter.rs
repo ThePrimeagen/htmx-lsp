@@ -23,8 +23,7 @@ use crate::{
     position::{query_position, Position as PositionType, PositionDefinition, QueryType},
     queries::{HX_JS_TAGS, HX_RUST_TAGS},
     query_helper::{
-        query_htmx_lsp, query_tag, query_value, HTMLQueries as HTMLQueries2, HTMLQuery, HtmxQuery,
-        Queries,
+        query_htmx_lsp, query_tag, HTMLQueries as HTMLQueries2, HTMLQuery, HtmxQuery, Queries,
     },
     server::{LocalWriter, ServerTextDocumentItem},
 };
@@ -283,7 +282,7 @@ impl LspFiles {
         diagnostics: &mut Vec<Tag>,
         config: &RwLock<Option<HtmxConfig>>,
         document_map: &DashMap<String, Rope>,
-        queries: &Queries,
+        queries: &Arc<Mutex<Queries>>,
     ) -> Option<Vec<Tag>> {
         let path = Path::new(&uri);
         let file = self.get_index(uri)?;
@@ -298,7 +297,17 @@ impl LspFiles {
             let mut a = LocalWriter::default();
             let _ = content.write_to(&mut a);
             let content = a.content;
-            let _ = self.add_tags_from_file(file, lang_type, &content, false, queries, diagnostics);
+            let _ = queries.lock().is_ok_and(|queries| {
+                let _ = self.add_tags_from_file(
+                    file,
+                    lang_type,
+                    &content,
+                    false,
+                    &queries,
+                    diagnostics,
+                );
+                true
+            });
             return Some(diagnostics.to_vec());
             //
         }
@@ -334,14 +343,13 @@ impl LspFiles {
                 false,
             );
             let tag = tags.first()?;
-            drop(tree);
             let mut references = vec![];
             for tree in self.trees.iter() {
                 if tree.1 == LangType::Template {
                     let file = self.get_uri(*tree.key())?;
                     let mut w = LocalWriter::default();
                     let content = document_map.get(&file)?;
-                    content.value().write_to(&mut w);
+                    let _ = content.value().write_to(&mut w);
                     query_htmx_lsp(
                         tree.0.root_node(),
                         &w.content,
@@ -395,6 +403,21 @@ impl Parsers {
             LangType::JavaScript => self.javascript.parse(text, None),
             LangType::Backend => self.backend.parse(text, None),
         }
+    }
+
+    pub fn change_backend(&mut self, language: &str, lang_type: LangType) -> Option<()> {
+        if lang_type != LangType::Backend {
+            return None;
+        }
+        let language = match language {
+            "python" => Some(tree_sitter_python::language()),
+            "go" => Some(tree_sitter_go::language()),
+            _ => None,
+        };
+        let mut backend = Parser::new();
+        let _ = backend.set_language(language?);
+        self.backend = backend;
+        None
     }
 }
 

@@ -25,7 +25,7 @@ use tower_lsp::{lsp_types::InitializeResult, Client, LanguageServer};
 
 use crate::htmx_tree_sitter::LspFiles;
 use crate::init_hx::{init_hx_tags, init_hx_values, HxCompletion};
-use crate::position::{get_position_from_lsp_completion, Position, QueryType};
+use crate::position::{get_position_from_lsp_completion, query_position, Position, QueryType};
 
 pub struct BackendHtmx {
     pub client: Client,
@@ -35,7 +35,7 @@ pub struct BackendHtmx {
     pub is_helix: RwLock<bool>,
     pub htmx_config: RwLock<Option<HtmxConfig>>,
     pub lsp_files: Arc<Mutex<LspFiles>>,
-    pub queries: Queries,
+    pub queries: Arc<Mutex<Queries>>,
 }
 
 impl BackendHtmx {
@@ -48,7 +48,7 @@ impl BackendHtmx {
             is_helix: RwLock::new(false),
             htmx_config: RwLock::new(None),
             lsp_files: Arc::new(Mutex::new(LspFiles::default())),
-            queries: Queries::default(),
+            queries: Arc::new(Mutex::new(Queries::default())),
         }
     }
 
@@ -255,14 +255,27 @@ impl LanguageServer for BackendHtmx {
         }
 
         let uri = &params.text_document_position.text_document.uri;
-        let result = get_position_from_lsp_completion(
-            &params.text_document_position,
-            &self.document_map,
-            uri.to_string(),
-            QueryType::Completion,
-            &self.lsp_files,
-            &self.queries.html,
-        );
+        if uri
+            .to_file_path()
+            .unwrap()
+            .extension()
+            .is_some_and(|ext| ext != "html")
+        {
+            return Ok(None);
+        }
+        let mut result = None;
+        let _ = self.queries.lock().is_ok_and(|queries| {
+            result = get_position_from_lsp_completion(
+                &params.text_document_position,
+                &self.document_map,
+                uri.to_string(),
+                QueryType::Completion,
+                &self.lsp_files,
+                &queries.html,
+            );
+            true
+        });
+
         if let Some(result) = result {
             match result {
                 Position::AttributeName(name) => {
@@ -302,14 +315,18 @@ impl LanguageServer for BackendHtmx {
 
     async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
         let uri = &params.text_document_position_params.text_document.uri;
-        let result = get_position_from_lsp_completion(
-            &params.text_document_position_params,
-            &self.document_map,
-            uri.to_string(),
-            QueryType::Hover,
-            &self.lsp_files,
-            &self.queries.html,
-        );
+        let mut result = None;
+        let _ = self.queries.lock().is_ok_and(|queries| {
+            result = get_position_from_lsp_completion(
+                &params.text_document_position_params,
+                &self.document_map,
+                uri.to_string(),
+                QueryType::Hover,
+                &self.lsp_files,
+                &queries.html,
+            );
+            true
+        });
 
         if let Some(result) = result {
             match result {
@@ -360,14 +377,18 @@ impl LanguageServer for BackendHtmx {
     ) -> Result<Option<GotoDefinitionResponse>> {
         let mut res: Result<Option<GotoDefinitionResponse>> = Ok(None);
         let _tree = self.lsp_files.lock().is_ok_and(|lsp_files| {
-            let position = lsp_files.goto_definition(
-                params,
-                &self.htmx_config,
-                &self.document_map,
-                &self.queries.html,
-            );
-            drop(lsp_files);
-            res = Ok(self.check_definition(position));
+            let _ = self.queries.lock().is_ok_and(|queries| {
+                let position = lsp_files.goto_definition(
+                    params,
+                    &self.htmx_config,
+                    &self.document_map,
+                    &queries.html,
+                );
+                drop(queries);
+                drop(lsp_files);
+                res = Ok(self.check_definition(position));
+                true
+            });
             true
         });
         res
@@ -378,8 +399,11 @@ impl LanguageServer for BackendHtmx {
         if let Ok(config) = self.htmx_config.read() {
             if let Some(_a) = config.as_ref() {
                 let _ = self.lsp_files.lock().is_ok_and(|lsp_files| {
-                    locations = lsp_files.references(params, &self.queries, &self.document_map);
-                    false
+                    let _ = self.queries.lock().is_ok_and(|queries| {
+                        locations = lsp_files.references(params, &queries, &self.document_map);
+                        true
+                    });
+                    true
                 });
             }
         }
@@ -410,7 +434,7 @@ impl std::io::Write for LocalWriter {
         if let Ok(b) = std::str::from_utf8(buf) {
             self.content.push_str(b);
         }
-        Ok(self.content.len())
+        Ok(buf.len())
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
