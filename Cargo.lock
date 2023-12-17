@@ -222,7 +222,7 @@ dependencies = [
 
 [[package]]
 name = "htmx-lsp"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "dashmap",

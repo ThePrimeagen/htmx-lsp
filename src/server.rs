@@ -1,11 +1,13 @@
 use crate::config::{read_config, validate_config, HtmxConfig};
 use crate::htmx_tags::Tag;
 use crate::query_helper::Queries;
+use crate::to_input_edit::ToInputEdit;
 use std::collections::HashMap;
 
 use std::path::Path;
 use std::sync::{Arc, Mutex, RwLock};
 
+use dashmap::mapref::one::RefMut;
 use dashmap::DashMap;
 use ropey::Rope;
 
@@ -17,15 +19,15 @@ use tower_lsp::lsp_types::{
     DidOpenTextDocumentParams, DidSaveTextDocumentParams, GotoDefinitionParams,
     GotoDefinitionResponse, Hover, HoverContents, HoverParams, HoverProviderCapability,
     InitializedParams, Location, MarkupContent, MarkupKind, MessageType, OneOf, ReferenceParams,
-    ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
-    TextDocumentSyncSaveOptions, Url,
+    ServerCapabilities, TextDocumentContentChangeEvent, TextDocumentSyncCapability,
+    TextDocumentSyncKind, TextDocumentSyncOptions, TextDocumentSyncSaveOptions, Url,
 };
 use tower_lsp::lsp_types::{InitializeParams, ServerInfo};
 use tower_lsp::{lsp_types::InitializeResult, Client, LanguageServer};
 
 use crate::htmx_tree_sitter::LspFiles;
 use crate::init_hx::{init_hx_tags, init_hx_values, HxCompletion};
-use crate::position::{get_position_from_lsp_completion, query_position, Position, QueryType};
+use crate::position::{get_position_from_lsp_completion, Position, QueryType};
 
 pub struct BackendHtmx {
     pub client: Client,
@@ -52,7 +54,7 @@ impl BackendHtmx {
         }
     }
 
-    async fn on_change(&self, params: ServerTextDocumentItem) {
+    fn on_change(&self, params: ServerTextDocumentItem) {
         let rope = ropey::Rope::from_str(&params.text);
         self.document_map
             .insert(params.uri.to_string(), rope.clone());
@@ -60,6 +62,28 @@ impl BackendHtmx {
             lsp_files.on_change(params);
             true
         });
+    }
+
+    fn on_remove(
+        &self,
+        params: &TextDocumentContentChangeEvent,
+        rope: &mut RefMut<'_, String, Rope>,
+    ) -> Option<()> {
+        let range = params.range?;
+        let (start, end) = range.to_byte(rope);
+        rope.remove(start..end);
+        None
+    }
+
+    fn on_insert(
+        &self,
+        params: &TextDocumentContentChangeEvent,
+        rope: &mut RefMut<'_, String, Rope>,
+    ) -> Option<()> {
+        let range = params.range?;
+        let (start, _) = range.to_byte(rope);
+        rope.insert(start, &params.text);
+        None
     }
 
     async fn publish_tag_diagnostics(&self, diagnostics: Vec<Tag>, file: Option<String>) {
@@ -142,7 +166,7 @@ impl LanguageServer for BackendHtmx {
             capabilities: ServerCapabilities {
                 text_document_sync: Some(TextDocumentSyncCapability::Options(
                     TextDocumentSyncOptions {
-                        change: Some(TextDocumentSyncKind::FULL),
+                        change: Some(TextDocumentSyncKind::INCREMENTAL),
                         will_save: Some(true),
                         save: Some(TextDocumentSyncSaveOptions::Supported(true)),
                         ..Default::default()
@@ -199,8 +223,7 @@ impl LanguageServer for BackendHtmx {
         self.on_change(ServerTextDocumentItem {
             uri: params.text_document.uri,
             text: params.text_document.text,
-        })
-        .await;
+        });
     }
 
     async fn did_close(&self, _: DidCloseTextDocumentParams) {}
@@ -223,14 +246,34 @@ impl LanguageServer for BackendHtmx {
         self.publish_tag_diagnostics(diags, Some(uri)).await;
     }
 
-    async fn did_change(&self, mut params: DidChangeTextDocumentParams) {
-        if let Some(text) = params.content_changes.first_mut() {
-            self.on_change(ServerTextDocumentItem {
-                uri: params.text_document.uri,
-                text: std::mem::take(&mut text.text),
-            })
-            .await
+    async fn did_change(&self, params: DidChangeTextDocumentParams) {
+        let uri = &params.text_document.uri.to_string();
+        let rope = self.document_map.get_mut(uri);
+        if let Some(mut rope) = rope {
+            for change in params.content_changes {
+                if change.text.is_empty() {
+                    self.on_remove(&change, &mut rope);
+                } else {
+                    self.on_insert(&change, &mut rope);
+                }
+                if let Some(range) = &change.range {
+                    let mut w = LocalWriter::default();
+                    let _ = rope.write_to(&mut w);
+                    let input_edit = range.to_input_edit(&rope);
+                    let _ = self.lsp_files.lock().is_ok_and(|lsp_files| {
+                        lsp_files.input_edit(uri, w.content, input_edit);
+                        true
+                    });
+                }
+            }
         }
+        // if let Some(text) = params.content_changes.first_mut() {
+        // self.on_change(ServerTextDocumentItem {
+        //     uri: params.text_document.uri,
+        //     text: std::mem::take(&mut text.text),
+        // })
+        // .await
+        // }
     }
 
     async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
@@ -255,13 +298,17 @@ impl LanguageServer for BackendHtmx {
         }
 
         let uri = &params.text_document_position.text_document.uri;
-        if uri
-            .to_file_path()
-            .unwrap()
-            .extension()
-            .is_some_and(|ext| ext != "html")
-        {
-            return Ok(None);
+        match uri.to_file_path().unwrap().extension().is_some_and(|ext| {
+            let _ = self.htmx_config.read().is_ok_and(|config| {
+                if let Some(config) = config.as_ref() {
+                    return ext.to_str().unwrap() != config.template_ext;
+                }
+                false
+            });
+            false
+        }) {
+            true => return Ok(None),
+            false => (),
         }
         let mut result = None;
         let _ = self.queries.lock().is_ok_and(|queries| {

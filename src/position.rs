@@ -64,7 +64,6 @@ pub fn get_position_from_lsp_completion(
 
     if let Ok(lsp_files) = lsp_files.lock() {
         if let Some(index) = lsp_files.get_index(&uri) {
-            lsp_files.add_tree(index, None, &text, None);
             if let Some(tree) = lsp_files.get_tree(index) {
                 let root_node = tree.0.root_node();
                 let trigger_point = Point::new(pos.line as usize, pos.character as usize);

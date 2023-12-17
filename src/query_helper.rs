@@ -1,4 +1,4 @@
-use std::{collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
 use tree_sitter::{Node, Point, Query, QueryCursor};
 
@@ -286,6 +286,7 @@ pub fn query_tag(
     for comment in comments {
         if let Some(mut tag) = get_tag(&comment.1.value) {
             tag.line = comment.1.start_position.row;
+            tag.end = comment.1.end_position.column;
             tags.push(tag);
         }
     }
