@@ -185,7 +185,6 @@ pub fn query_name(
 ) -> Option<Position> {
     let props = query_props(element, source, trigger_point, query, false);
     let attr_name = props.get("attr_name")?;
-    // dbg_props(&props);
     if let Some(unfinished_tag) = props.get("unfinished_tag") {
         if query_type == &QueryType::Hover {
             let complete_match = props.get("complete_match");
@@ -215,7 +214,6 @@ pub fn query_value(
     query: &Query,
 ) -> Option<Position> {
     let props = query_props(element, source, trigger_point, query, false);
-    // dbg_props(&props);
 
     let attr_name = props.get("attr_name")?;
     let mut value = String::new();
