@@ -16,10 +16,10 @@ impl ToInputEdit for Range {
     }
 
     fn to_byte(&self, rope: &Rope) -> (usize, usize) {
-        let start_line = rope.line_to_char(self.start.line as usize);
+        let start_line = rope.line_to_byte(self.start.line as usize);
         let start_offset = start_line + self.start.character as usize;
 
-        let end_line = rope.line_to_char(self.end.line as usize);
+        let end_line = rope.line_to_byte(self.end.line as usize);
         let end_offset = end_line + self.end.character as usize;
 
         (start_offset, end_offset)

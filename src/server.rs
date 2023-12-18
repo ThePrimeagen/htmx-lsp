@@ -18,9 +18,9 @@ use tower_lsp::lsp_types::{
     CompletionTriggerKind, Diagnostic, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
     DidOpenTextDocumentParams, DidSaveTextDocumentParams, GotoDefinitionParams,
     GotoDefinitionResponse, Hover, HoverContents, HoverParams, HoverProviderCapability,
-    InitializedParams, Location, MarkupContent, MarkupKind, MessageType, OneOf, ReferenceParams,
-    ServerCapabilities, TextDocumentContentChangeEvent, TextDocumentSyncCapability,
-    TextDocumentSyncKind, TextDocumentSyncOptions, TextDocumentSyncSaveOptions, Url,
+    InitializedParams, Location, MarkupContent, MarkupKind, MessageType, OneOf, Range,
+    ReferenceParams, ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind,
+    TextDocumentSyncOptions, TextDocumentSyncSaveOptions, Url,
 };
 use tower_lsp::lsp_types::{InitializeParams, ServerInfo};
 use tower_lsp::{lsp_types::InitializeResult, Client, LanguageServer};
@@ -34,7 +34,7 @@ pub struct BackendHtmx {
     pub document_map: DashMap<String, Rope>,
     pub hx_tags: Vec<HxCompletion>,
     pub hx_attribute_values: HashMap<String, Vec<HxCompletion>>,
-    pub can_complete: RwLock<bool>,
+    pub is_helix: RwLock<bool>,
     pub htmx_config: RwLock<Option<HtmxConfig>>,
     pub lsp_files: Arc<Mutex<LspFiles>>,
     pub queries: Arc<Mutex<Queries>>,
@@ -47,7 +47,7 @@ impl BackendHtmx {
             document_map: DashMap::new(),
             hx_tags: init_hx_tags(),
             hx_attribute_values: init_hx_values(),
-            can_complete: RwLock::new(false),
+            is_helix: RwLock::new(false),
             htmx_config: RwLock::new(None),
             lsp_files: Arc::new(Mutex::new(LspFiles::default())),
             queries: Arc::new(Mutex::new(Queries::default())),
@@ -64,12 +64,7 @@ impl BackendHtmx {
         });
     }
 
-    fn on_remove(
-        &self,
-        params: &TextDocumentContentChangeEvent,
-        rope: &mut RefMut<'_, String, Rope>,
-    ) -> Option<()> {
-        let range = params.range?;
+    fn on_remove(&self, range: &Range, rope: &mut RefMut<'_, String, Rope>) -> Option<()> {
         let (start, end) = range.to_byte(rope);
         rope.remove(start..end);
         None
@@ -77,12 +72,12 @@ impl BackendHtmx {
 
     fn on_insert(
         &self,
-        params: &TextDocumentContentChangeEvent,
+        range: &Range,
+        text: &str,
         rope: &mut RefMut<'_, String, Rope>,
     ) -> Option<()> {
-        let range = params.range?;
         let (start, _) = range.to_byte(rope);
-        rope.insert(start, &params.text);
+        rope.insert(start, text);
         None
     }
 
@@ -140,8 +135,8 @@ impl LanguageServer for BackendHtmx {
         let mut code_action_provider = None;
         if let Some(client_info) = params.client_info {
             if client_info.name == "helix" {
-                if let Ok(mut can_complete) = self.can_complete.write() {
-                    *can_complete = true;
+                if let Ok(mut is_helix) = self.is_helix.write() {
+                    *is_helix = true;
                 }
             }
         }
@@ -251,15 +246,16 @@ impl LanguageServer for BackendHtmx {
         let rope = self.document_map.get_mut(uri);
         if let Some(mut rope) = rope {
             for change in params.content_changes {
-                if change.text.is_empty() {
-                    self.on_remove(&change, &mut rope);
-                } else {
-                    self.on_insert(&change, &mut rope);
-                }
                 if let Some(range) = &change.range {
+                    let input_edit = range.to_input_edit(&rope);
+                    if change.text.is_empty() {
+                        self.on_remove(range, &mut rope);
+                    } else {
+                        self.on_insert(range, &change.text, &mut rope);
+                    }
                     let mut w = LocalWriter::default();
                     let _ = rope.write_to(&mut w);
-                    let input_edit = range.to_input_edit(&rope);
+                    let _ = std::fs::write("jeste", &w.content);
                     let _ = self.lsp_files.lock().is_ok_and(|lsp_files| {
                         lsp_files.input_edit(uri, w.content, input_edit);
                         true
@@ -291,8 +287,8 @@ impl LanguageServer for BackendHtmx {
         };
         // TODO disable for backend and javascript
         if !can_complete {
-            let can_complete = self.can_complete.read().is_ok_and(|d| *d);
-            if !can_complete {
+            let is_helix = self.is_helix.read().is_ok_and(|d| *d);
+            if !is_helix {
                 return Ok(None);
             }
         }
