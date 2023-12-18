@@ -34,7 +34,7 @@ pub struct BackendHtmx {
     pub document_map: DashMap<String, Rope>,
     pub hx_tags: Vec<HxCompletion>,
     pub hx_attribute_values: HashMap<String, Vec<HxCompletion>>,
-    pub is_helix: RwLock<bool>,
+    pub can_complete: RwLock<bool>,
     pub htmx_config: RwLock<Option<HtmxConfig>>,
     pub lsp_files: Arc<Mutex<LspFiles>>,
     pub queries: Arc<Mutex<Queries>>,
@@ -47,7 +47,7 @@ impl BackendHtmx {
             document_map: DashMap::new(),
             hx_tags: init_hx_tags(),
             hx_attribute_values: init_hx_values(),
-            is_helix: RwLock::new(false),
+            can_complete: RwLock::new(false),
             htmx_config: RwLock::new(None),
             lsp_files: Arc::new(Mutex::new(LspFiles::default())),
             queries: Arc::new(Mutex::new(Queries::default())),
@@ -140,8 +140,8 @@ impl LanguageServer for BackendHtmx {
         let mut code_action_provider = None;
         if let Some(client_info) = params.client_info {
             if client_info.name == "helix" {
-                if let Ok(mut is_helix) = self.is_helix.write() {
-                    *is_helix = true;
+                if let Ok(mut can_complete) = self.can_complete.write() {
+                    *can_complete = true;
                 }
             }
         }
@@ -291,8 +291,8 @@ impl LanguageServer for BackendHtmx {
         };
         // TODO disable for backend and javascript
         if !can_complete {
-            let is_helix = self.is_helix.read().is_ok_and(|d| *d);
-            if !is_helix {
+            let can_complete = self.can_complete.read().is_ok_and(|d| *d);
+            if !can_complete {
                 return Ok(None);
             }
         }
