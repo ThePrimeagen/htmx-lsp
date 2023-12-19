@@ -207,6 +207,10 @@ impl LanguageServer for BackendHtmx {
                 self.publish_tag_diagnostics(diagnostics, None).await;
             }
             Err(err) => {
+                let _ = self.htmx_config.write().is_ok_and(|mut config| {
+                    *config = None;
+                    true
+                });
                 let msg = err.to_string();
                 self.client.log_message(MessageType::INFO, msg).await;
             }
@@ -295,13 +299,12 @@ impl LanguageServer for BackendHtmx {
 
         let uri = &params.text_document_position.text_document.uri;
         match uri.to_file_path().unwrap().extension().is_some_and(|ext| {
-            let _ = self.htmx_config.read().is_ok_and(|config| {
+            self.htmx_config.read().is_ok_and(|config| {
                 if let Some(config) = config.as_ref() {
                     return ext.to_str().unwrap() != config.template_ext;
                 }
                 false
-            });
-            false
+            })
         }) {
             true => return Ok(None),
             false => (),

@@ -393,6 +393,21 @@ impl LspFiles {
         locations
     }
 
+    pub fn query_position(
+        &self,
+        index: usize,
+        text: &str,
+        query_type: QueryType,
+        pos: Position,
+        query: &HTMLQueries2,
+    ) -> Option<PositionType> {
+        let tree = self.get_tree(index)?;
+        let root_node = tree.0.root_node();
+        let trigger_point = Point::new(pos.line as usize, pos.character as usize);
+
+        query_position(root_node, text, trigger_point, query_type, query)
+    }
+
     pub fn get_tree(&self, index: usize) -> Option<Ref<'_, usize, (Tree, LangType)>> {
         self.trees.get(&index)
     }

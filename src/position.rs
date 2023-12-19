@@ -10,6 +10,7 @@ use tree_sitter::{Node, Point};
 
 use crate::{
     htmx_tree_sitter::LspFiles,
+    init_hx::LangType,
     query_helper::{query_name, query_value, HTMLQueries, HTMLQuery},
 };
 
@@ -64,15 +65,16 @@ pub fn get_position_from_lsp_completion(
 
     if let Ok(lsp_files) = lsp_files.lock() {
         if let Some(index) = lsp_files.get_index(&uri) {
-            if let Some(tree) = lsp_files.get_tree(index) {
-                let root_node = tree.0.root_node();
-                let trigger_point = Point::new(pos.line as usize, pos.character as usize);
-
-                return query_position(root_node, &text, trigger_point, query_type, query);
-            }
+            lsp_files.query_position(index, &text, query_type, pos, query)
+        } else if let Some(index) = lsp_files.add_file(String::from(&uri)) {
+            lsp_files.add_tree(index, Some(LangType::Template), &text, None);
+            lsp_files.query_position(index, &text, query_type, pos, query)
+        } else {
+            None
         }
+    } else {
+        None
     }
-    None
 }
 
 fn find_element_referent_to_current_node(node: Node<'_>) -> Option<Node<'_>> {
@@ -199,7 +201,7 @@ mod tests1 {
     use tree_sitter::{Parser, Point};
 
     use crate::{
-        position::{find_element_referent_to_current_node, query_position, Position, QueryType},
+        position::{query_position, Position, QueryType},
         query_helper::{query_props, HTMLQueries, Queries},
     };
 
