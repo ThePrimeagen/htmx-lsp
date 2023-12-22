@@ -259,7 +259,6 @@ impl LanguageServer for BackendHtmx {
                     }
                     let mut w = LocalWriter::default();
                     let _ = rope.write_to(&mut w);
-                    let _ = std::fs::write("jeste", &w.content);
                     let _ = self.lsp_files.lock().is_ok_and(|lsp_files| {
                         lsp_files.input_edit(uri, w.content, input_edit);
                         true
