@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HxCompletion {
     pub name: String,
@@ -212,7 +210,7 @@ pub enum ChannelMsg {
     InitTreeSitter,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum LangType {
     Template,
     JavaScript,

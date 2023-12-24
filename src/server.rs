@@ -12,15 +12,16 @@ use dashmap::DashMap;
 use ropey::Rope;
 
 use tower_lsp::jsonrpc::Result;
+use tower_lsp::lsp_types::request::{GotoImplementationParams, GotoImplementationResponse};
 use tower_lsp::lsp_types::{
     CodeActionParams, CodeActionProviderCapability, CodeActionResponse, CompletionContext,
     CompletionItem, CompletionItemKind, CompletionOptions, CompletionParams, CompletionResponse,
     CompletionTriggerKind, Diagnostic, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
     DidOpenTextDocumentParams, DidSaveTextDocumentParams, GotoDefinitionParams,
     GotoDefinitionResponse, Hover, HoverContents, HoverParams, HoverProviderCapability,
-    InitializedParams, Location, MarkupContent, MarkupKind, MessageType, OneOf, Range,
-    ReferenceParams, ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind,
-    TextDocumentSyncOptions, TextDocumentSyncSaveOptions, Url,
+    ImplementationProviderCapability, InitializedParams, Location, MarkupContent, MarkupKind,
+    MessageType, OneOf, Range, ReferenceParams, ServerCapabilities, TextDocumentSyncCapability,
+    TextDocumentSyncKind, TextDocumentSyncOptions, TextDocumentSyncSaveOptions, Url,
 };
 use tower_lsp::lsp_types::{InitializeParams, ServerInfo};
 use tower_lsp::{lsp_types::InitializeResult, Client, LanguageServer};
@@ -133,6 +134,7 @@ impl LanguageServer for BackendHtmx {
         let mut definition_provider = None;
         let mut references_provider = None;
         let mut code_action_provider = None;
+        let mut implementation_provider = None;
         if let Some(client_info) = params.client_info {
             if client_info.name == "helix" {
                 if let Ok(mut can_complete) = self.can_complete.write() {
@@ -146,6 +148,7 @@ impl LanguageServer for BackendHtmx {
                     definition_provider = Some(OneOf::Left(true));
                     references_provider = Some(OneOf::Left(true));
                     code_action_provider = Some(CodeActionProviderCapability::Simple(true));
+                    implementation_provider = Some(ImplementationProviderCapability::Simple(true));
                     *config = Some(htmx_config);
                     true
                 });
@@ -182,6 +185,7 @@ impl LanguageServer for BackendHtmx {
                 definition_provider,
                 references_provider,
                 code_action_provider,
+                implementation_provider,
                 ..ServerCapabilities::default()
             },
             server_info: Some(ServerInfo {
@@ -453,6 +457,25 @@ impl LanguageServer for BackendHtmx {
             }
         }
         Ok(locations)
+    }
+
+    async fn goto_implementation(
+        &self,
+        params: GotoImplementationParams,
+    ) -> Result<Option<GotoImplementationResponse>> {
+        let mut res = None;
+        if let Ok(config) = self.htmx_config.read() {
+            if let Some(_a) = config.as_ref() {
+                let _ = self.lsp_files.lock().is_ok_and(|lsp_files| {
+                    let _ = self.queries.lock().is_ok_and(|queries| {
+                        res = lsp_files.goto_implementation(params, &queries, &self.document_map);
+                        true
+                    });
+                    true
+                });
+            }
+        }
+        Ok(res)
     }
 
     async fn code_action(&self, _params: CodeActionParams) -> Result<Option<CodeActionResponse>> {

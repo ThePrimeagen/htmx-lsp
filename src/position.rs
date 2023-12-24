@@ -21,7 +21,7 @@ pub enum QueryType {
     Definition,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CaptureDetails {
     pub value: String,
     pub end_position: Point,

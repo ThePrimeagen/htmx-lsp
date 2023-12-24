@@ -324,3 +324,17 @@ pub fn query_htmx_lsp(
         }
     }
 }
+
+pub fn find_hx_lsp(
+    element: Node<'_>,
+    source: String,
+    trigger_point: Point,
+    query: &Query,
+) -> Option<CaptureDetails> {
+    let props = query_props(element, &source, trigger_point, query, false);
+    if props.get("attr_name").is_some() {
+        let value = props.get("attr_value")?;
+        return Some(value.clone());
+    }
+    None
+}

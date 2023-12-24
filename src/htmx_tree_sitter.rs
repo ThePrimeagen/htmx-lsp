@@ -11,6 +11,7 @@ use dashmap::{
 };
 use ropey::Rope;
 use tower_lsp::lsp_types::{
+    request::{GotoImplementationParams, GotoImplementationResponse},
     Diagnostic, DiagnosticSeverity, GotoDefinitionParams, GotoDefinitionResponse, Location,
     Position, Range, ReferenceParams, Url,
 };
@@ -23,7 +24,8 @@ use crate::{
     position::{query_position, Position as PositionType, PositionDefinition, QueryType},
     queries::{HX_JS_TAGS, HX_RUST_TAGS},
     query_helper::{
-        query_htmx_lsp, query_tag, HTMLQueries as HTMLQueries2, HTMLQuery, HtmxQuery, Queries,
+        find_hx_lsp, query_htmx_lsp, query_tag, HTMLQueries as HTMLQueries2, HTMLQuery, HtmxQuery,
+        Queries,
     },
     server::{LocalWriter, ServerTextDocumentItem},
 };
@@ -391,6 +393,51 @@ impl LspFiles {
             locations = Some(response);
         }
         locations
+    }
+
+    pub fn goto_implementation(
+        &self,
+        params: GotoImplementationParams,
+        queries: &Queries,
+        document_map: &DashMap<String, Rope>,
+    ) -> Option<GotoImplementationResponse> {
+        let uri = String::from(
+            &params
+                .text_document_position_params
+                .text_document
+                .uri
+                .to_string(),
+        );
+        let point = Point::new(
+            params.text_document_position_params.position.line as usize,
+            params.text_document_position_params.position.character as usize,
+        );
+        let index = self.get_index(&uri)?;
+        let tree = self.get_tree(index)?;
+        if tree.1 != LangType::Template {
+            return None;
+        }
+        let query = queries.html.get(HTMLQuery::Lsp);
+        let content = document_map.get(&uri)?;
+        let mut w = LocalWriter::default();
+        let _ = content.value().write_to(&mut w);
+        drop(content);
+        let uri = params
+            .text_document_position_params
+            .text_document
+            .uri
+            .clone();
+        let capture = find_hx_lsp(tree.0.root_node(), w.content, point, query)?;
+        let start = Position {
+            line: capture.start_position.row as u32,
+            character: capture.start_position.column as u32,
+        };
+        let end = Position {
+            line: capture.end_position.row as u32,
+            character: capture.end_position.column as u32,
+        };
+        let range = Range { start, end };
+        Some(GotoImplementationResponse::Scalar(Location { uri, range }))
     }
 
     pub fn query_position(
