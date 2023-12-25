@@ -17,7 +17,7 @@ use tower_lsp::lsp_types::{
     CodeActionParams, CodeActionProviderCapability, CodeActionResponse, CompletionContext,
     CompletionItem, CompletionItemKind, CompletionOptions, CompletionParams, CompletionResponse,
     CompletionTriggerKind, Diagnostic, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
-    DidOpenTextDocumentParams, DidSaveTextDocumentParams, GotoDefinitionParams,
+    DidOpenTextDocumentParams, DidSaveTextDocumentParams, Documentation, GotoDefinitionParams,
     GotoDefinitionResponse, Hover, HoverContents, HoverParams, HoverProviderCapability,
     ImplementationProviderCapability, InitializedParams, Location, MarkupContent, MarkupKind,
     MessageType, OneOf, Range, ReferenceParams, ServerCapabilities, TextDocumentSyncCapability,
@@ -334,8 +334,11 @@ impl LanguageServer for BackendHtmx {
                         for item in completions {
                             ret.push(CompletionItem {
                                 label: item.name.to_string(),
-                                detail: Some(item.desc.to_string()),
                                 kind: Some(CompletionItemKind::TEXT),
+                                documentation: Some(Documentation::MarkupContent(MarkupContent {
+                                    kind: MarkupKind::Markdown,
+                                    value: item.desc.to_string(),
+                                })),
                                 ..Default::default()
                             });
                         }

@@ -40,18 +40,22 @@ If you’d rather prioritize the validation request over the submit request, you
 
 When dealing with forms that contain many inputs, you can prioritize the submit request over all input validation requests using the hx-sync replace strategy on the form tag. This will cancel any in-flight validation requests and issue only the hx-post="/store" request. If you’d rather abort the submit request and prioritize any existing validation requests you can use the hx-sync="this:abort" strategy on the form tag.
 
+```html
 <form hx-post="/store" hx-sync="this:replace">
     <input id="title" name="title" type="text" hx-post="/validate" hx-trigger="change" />
     <button type="submit">Submit</button>
 </form>
+```
 
 When implementing active search functionality the hx-trigger attribute’s delay modifier can be used to debounce the user’s input and avoid making multiple requests while the user types. However, once a request is made, if the user begins typing again a new request will begin even if the previous one has not finished processing. This example will cancel any in-flight requests and use only the last request. In cases where the search input is contained within the target, then using hx-sync like this also helps reduce the chances that the input will be replaced while the user is still typing.
 
+```html
 <input type="search"
     hx-get="/search"
     hx-trigger="keyup changed delay:500ms, search"
     hx-target="#search-results"
     hx-sync="this:replace">
+    ```
 
 
 [HTMX Reference](https://htmx.org/attributes/hx-sync/)

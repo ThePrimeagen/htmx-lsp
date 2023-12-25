@@ -1,10 +1,12 @@
-hx-delete
+**hx-delete**
 
 The hx-delete attribute will cause an element to issue a DELETE to the specified URL and swap the HTML into the DOM using a swap strategy:
 
+```html
 <button hx-delete="/account" hx-target="body">
   Delete Your Account
 </button>
+```
 This example will cause the button to issue a DELETE to /account and swap the returned HTML into the innerHTML of the body.
 
 Notes

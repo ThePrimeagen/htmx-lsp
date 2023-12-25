@@ -4,7 +4,9 @@ By default, the value of this attribute is a list of name-expression values in J
 
 If you wish for hx-headers to evaluate the values given, you can prefix the values with javascript: or js:.
 
-  <div hx-get="/example" hx-headers='{"myHeader": "My Value"}'>Get Some HTML, Including A Custom Header in the Request</div>
+```html
+<div hx-get="/example" hx-headers='{"myHeader": "My Value"}'>Get Some HTML, Including A Custom Header in the Request</div>
+```
 
 Security Considerations
 

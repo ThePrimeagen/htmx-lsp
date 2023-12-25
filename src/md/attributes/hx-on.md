@@ -7,28 +7,36 @@ hx-on:* (recommended)
 
 The event name follows a colon : in the attribute, and the attribute value is the script to be executed:
 
+```html
 <div hx-on:click="alert('Clicked!')">Click</div>
+```
 
 All htmx events can be captured, too! Make sure to use the kebab-case event name, because DOM attributes do not preserve casing. For instance, hx-on::beforeRequest will not work: use hx-on::before-request instead.
 
 To make writing these a little easier, you can use the shorthand double-colon hx-on:: for htmx events, and omit the “htmx” part:
 
 <!-- These two are equivalent -->
+```html
 <button hx-get="/info" hx-on:htmx:before-request="alert('Making a request!')">
     Get Info!
 </button>
+```
 
+```html
 <button hx-get="/info" hx-on::before-request="alert('Making a request!')">
     Get Info!
 </button>
+```
 
 Adding multiple handlers is easy, you just specify additional attributes:
 
+```html
 <button hx-get="/info"
         hx-on::before-request="alert('Making a request!')"
         hx-on::after-request="alert('Done making a request!')">
     Get Info!
 </button>
+```
 
 Symbols
 

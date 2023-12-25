@@ -2,6 +2,7 @@ The hx-history-elt attribute allows you to specify the element that will be used
 
 Here is an example:
 
+```html
 <html>
   <body>
     <div id="content" hx-history-elt>
@@ -9,6 +10,7 @@ Here is an example:
     </div>
   </body>
 </html>
+```
 
 Notes
 

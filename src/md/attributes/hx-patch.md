@@ -1,10 +1,13 @@
-hx-patch
+**hx-patch**
 
 The hx-patch attribute will cause an element to issue a PATCH to the specified URL and swap the HTML into the DOM using a swap strategy:
 
+```html
 <button hx-patch="/account" hx-target="body">
   Patch Your Account
 </button>
+```
+
 This example will cause the button to issue a PATCH to /account and swap the returned HTML into the innerHTML of the body.
 
 Notes

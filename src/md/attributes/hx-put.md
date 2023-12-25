@@ -1,10 +1,13 @@
-hx-put
+**hx-put**
 
 The hx-put attribute will cause an element to issue a PUT to the specified URL and swap the HTML into the DOM using a swap strategy:
 
+```html
 <button hx-put="/account" hx-target="body">
   Put Money In Your Account
 </button>
+```
+
 This example will cause the button to issue a PUT to /account and swap the returned HTML into the innerHTML of the body.
 
 Notes
