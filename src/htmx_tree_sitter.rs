@@ -30,6 +30,8 @@ use crate::{
     server::{LocalWriter, ServerTextDocumentItem},
 };
 
+type FileName = usize;
+
 #[derive(Debug)]
 pub struct BackendTreeSitter {
     pub tree: Tree,
@@ -38,8 +40,8 @@ pub struct BackendTreeSitter {
 #[derive(Clone)]
 pub struct LspFiles {
     current: RefCell<usize>,
-    indexes: DashMap<String, usize>,
-    trees: DashMap<usize, (Tree, LangType)>,
+    indexes: DashMap<String, FileName>,
+    trees: DashMap<FileName, (Tree, LangType)>,
     pub parsers: Arc<Mutex<Parsers>>,
     pub tags: DashMap<String, Tag>,
 }
@@ -98,8 +100,8 @@ impl LspFiles {
         None
     }
 
-    pub fn get_index(&self, key: &String) -> Option<usize> {
-        if let Some(d) = self.indexes.get(key) {
+    pub fn get_index(&self, file: &String) -> Option<usize> {
+        if let Some(d) = self.indexes.get(file) {
             let a = *d;
             return Some(a);
         }
@@ -171,7 +173,7 @@ impl LspFiles {
     pub fn goto_definition(
         &self,
         params: GotoDefinitionParams,
-        config: &RwLock<Option<HtmxConfig>>,
+        config: &RwLock<HtmxConfig>,
         document_map: &DashMap<String, Rope>,
         query: &HTMLQueries2,
         // res: tower_lsp::jsonrpc::Result<Option<GotoDefinitionResponse>>,
@@ -183,11 +185,11 @@ impl LspFiles {
             .uri
             .to_string();
         let ext = config.read().is_ok_and(|config| {
-            if let Some(config) = config.as_ref() {
-                let ext = config.file_ext(Path::new(&file));
-                return ext.is_some_and(|lang_type| lang_type == LangType::Template);
+            if !config.is_valid {
+                return false;
             }
-            false
+            let ext = config.file_ext(Path::new(&file));
+            ext.is_some_and(|lang_type| lang_type == LangType::Template)
         });
         if !ext {
             return None;
@@ -299,14 +301,13 @@ impl LspFiles {
         &self,
         uri: &String,
         diagnostics: &mut Vec<Tag>,
-        config: &RwLock<Option<HtmxConfig>>,
+        config: &RwLock<HtmxConfig>,
         document_map: &DashMap<String, Rope>,
         queries: &Arc<Mutex<Queries>>,
     ) -> Option<Vec<Tag>> {
         let path = Path::new(&uri);
         let file = self.get_index(uri)?;
         if let Ok(config) = config.read() {
-            let config = config.as_ref()?;
             let lang_type = config.file_ext(path)?;
             if lang_type == LangType::Template {
                 return None;

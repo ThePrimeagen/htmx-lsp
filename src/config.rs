@@ -12,13 +12,15 @@ use std::{
 use crate::{htmx_tags::Tag, htmx_tree_sitter::LspFiles, init_hx::LangType, query_helper::Queries};
 use thiserror::Error;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct HtmxConfig {
     pub lang: String,
     pub template_ext: String,
     pub templates: Vec<String>,
     pub js_tags: Vec<String>,
     pub backend_tags: Vec<String>,
+    #[serde(skip)]
+    pub is_valid: bool,
 }
 
 impl HtmxConfig {
@@ -50,7 +52,8 @@ impl HtmxConfig {
 
 pub fn validate_config(config: Option<Value>) -> Option<HtmxConfig> {
     if let Some(config) = config {
-        if let Ok(config) = serde_json::from_value::<HtmxConfig>(config) {
+        if let Ok(mut config) = serde_json::from_value::<HtmxConfig>(config) {
+            config.is_valid = true;
             return Some(config);
         }
     }
@@ -58,22 +61,18 @@ pub fn validate_config(config: Option<Value>) -> Option<HtmxConfig> {
 }
 
 pub fn read_config(
-    config: &RwLock<Option<HtmxConfig>>,
+    config: &RwLock<HtmxConfig>,
     lsp_files: &Arc<Mutex<LspFiles>>,
     queries: &Arc<Mutex<Queries>>,
     document_map: &DashMap<String, Rope>,
 ) -> Result<Vec<Tag>, ConfigError> {
     if let Ok(config) = config.read() {
-        if let Some(config) = config.as_ref().filter(|_| true) {
-            if config.template_ext.is_empty() || config.template_ext.contains(' ') {
-                return Err(ConfigError::TemplateExtension);
-            } else if !config.is_supported_backend() {
-                return Err(ConfigError::LanguageSupport(String::from(&config.lang)));
-            }
-            walkdir(config, lsp_files, queries, document_map)
-        } else {
-            Err(ConfigError::ConfigNotFound)
+        if config.template_ext.is_empty() || config.template_ext.contains(' ') {
+            return Err(ConfigError::TemplateExtension);
+        } else if !config.is_supported_backend() {
+            return Err(ConfigError::LanguageSupport(String::from(&config.lang)));
         }
+        walkdir(&config, lsp_files, queries, document_map)
     } else {
         Err(ConfigError::ConfigNotFound)
     }

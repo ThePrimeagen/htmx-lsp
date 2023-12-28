@@ -36,7 +36,7 @@ pub struct BackendHtmx {
     pub hx_tags: Vec<HxCompletion>,
     pub hx_attribute_values: HashMap<String, Vec<HxCompletion>>,
     pub can_complete: RwLock<bool>,
-    pub htmx_config: RwLock<Option<HtmxConfig>>,
+    pub htmx_config: RwLock<HtmxConfig>,
     pub lsp_files: Arc<Mutex<LspFiles>>,
     pub queries: Arc<Mutex<Queries>>,
 }
@@ -49,7 +49,7 @@ impl BackendHtmx {
             hx_tags: init_hx_tags(),
             hx_attribute_values: init_hx_values(),
             can_complete: RwLock::new(false),
-            htmx_config: RwLock::new(None),
+            htmx_config: RwLock::new(HtmxConfig::default()),
             lsp_files: Arc::new(Mutex::new(LspFiles::default())),
             queries: Arc::new(Mutex::new(Queries::default())),
         }
@@ -149,7 +149,7 @@ impl LanguageServer for BackendHtmx {
                     references_provider = Some(OneOf::Left(true));
                     code_action_provider = Some(CodeActionProviderCapability::Simple(true));
                     implementation_provider = Some(ImplementationProviderCapability::Simple(true));
-                    *config = Some(htmx_config);
+                    *config = htmx_config;
                     true
                 });
             }
@@ -212,7 +212,7 @@ impl LanguageServer for BackendHtmx {
             }
             Err(err) => {
                 let _ = self.htmx_config.write().is_ok_and(|mut config| {
-                    *config = None;
+                    config.is_valid = false;
                     true
                 });
                 let msg = err.to_string();
@@ -303,10 +303,10 @@ impl LanguageServer for BackendHtmx {
         let uri = &params.text_document_position.text_document.uri;
         match uri.to_file_path().unwrap().extension().is_some_and(|ext| {
             self.htmx_config.read().is_ok_and(|config| {
-                if let Some(config) = config.as_ref() {
-                    return ext.to_str().unwrap() != config.template_ext;
+                if !config.is_valid {
+                    return false;
                 }
-                false
+                return ext.to_str().unwrap() != config.template_ext;
             })
         }) {
             true => return Ok(None),
@@ -449,15 +449,16 @@ impl LanguageServer for BackendHtmx {
     async fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
         let mut locations = None;
         if let Ok(config) = self.htmx_config.read() {
-            if let Some(_a) = config.as_ref() {
-                let _ = self.lsp_files.lock().is_ok_and(|lsp_files| {
-                    let _ = self.queries.lock().is_ok_and(|queries| {
-                        locations = lsp_files.references(params, &queries, &self.document_map);
-                        true
-                    });
+            if !config.is_valid {
+                return Ok(locations);
+            }
+            let _ = self.lsp_files.lock().is_ok_and(|lsp_files| {
+                let _ = self.queries.lock().is_ok_and(|queries| {
+                    locations = lsp_files.references(params, &queries, &self.document_map);
                     true
                 });
-            }
+                true
+            });
         }
         Ok(locations)
     }
@@ -468,15 +469,16 @@ impl LanguageServer for BackendHtmx {
     ) -> Result<Option<GotoImplementationResponse>> {
         let mut res = None;
         if let Ok(config) = self.htmx_config.read() {
-            if let Some(_a) = config.as_ref() {
-                let _ = self.lsp_files.lock().is_ok_and(|lsp_files| {
-                    let _ = self.queries.lock().is_ok_and(|queries| {
-                        res = lsp_files.goto_implementation(params, &queries, &self.document_map);
-                        true
-                    });
+            if !config.is_valid {
+                return Ok(res);
+            }
+            let _ = self.lsp_files.lock().is_ok_and(|lsp_files| {
+                let _ = self.queries.lock().is_ok_and(|queries| {
+                    res = lsp_files.goto_implementation(params, &queries, &self.document_map);
                     true
                 });
-            }
+                true
+            });
         }
         Ok(res)
     }
