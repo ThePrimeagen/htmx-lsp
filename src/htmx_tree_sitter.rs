@@ -127,17 +127,13 @@ impl LspFiles {
     pub fn input_edit(&self, file: &String, code: String, input_edit: InputEdit) -> Option<()> {
         let file = self.get_index(file)?;
         let mut old_tree = self.get_mut_tree(file)?;
-        let _ = self.parsers.lock().is_ok_and(|mut parsers| {
+        let _ = self.parsers.lock().ok().and_then(|mut parsers| {
             old_tree.0.edit(&input_edit);
-            let tree = parsers.parse(old_tree.1, &code, Some(&old_tree.0));
-            if let Some(tree) = tree {
-                let lang = old_tree.1;
-                drop(old_tree);
-                self.trees.insert(file, (tree, lang));
-            }
-            true
+            let tree = parsers.parse(old_tree.1, &code, Some(&old_tree.0))?;
+            let lang = old_tree.1;
+            drop(old_tree);
+            self.trees.insert(file, (tree, lang))
         });
-        //
         None
     }
 
@@ -176,7 +172,6 @@ impl LspFiles {
         config: &RwLock<HtmxConfig>,
         document_map: &DashMap<String, Rope>,
         query: &HTMLQueries2,
-        // res: tower_lsp::jsonrpc::Result<Option<GotoDefinitionResponse>>,
     ) -> Option<PositionType> {
         let response = None;
         let file = params
@@ -214,10 +209,8 @@ impl LspFiles {
                     query,
                 );
             }
-            // res = Ok(self.check_definition(position));
         }
         response
-        // drop(lsp_files);
     }
 
     pub fn goto_definition_response(
@@ -247,21 +240,25 @@ impl LspFiles {
         text: &str,
         _range: Option<Range>,
     ) {
-        let _ = self.parsers.lock().is_ok_and(|mut parsers| {
-            if let Some(old_tree) = self.trees.get_mut(&index) {
-                if let Some(tree) = parsers.parse(old_tree.1, text, Some(&old_tree.0)) {
-                    let lang = old_tree.1;
-                    drop(old_tree);
-                    self.trees.insert(index, (tree, lang));
+        let _ = self
+            .parsers
+            .lock()
+            .ok()
+            .and_then(|mut parsers| -> Option<()> {
+                if let Some(old_tree) = self.trees.get_mut(&index) {
+                    if let Some(tree) = parsers.parse(old_tree.1, text, Some(&old_tree.0)) {
+                        let lang = old_tree.1;
+                        drop(old_tree);
+                        self.trees.insert(index, (tree, lang));
+                    }
+                } else if let Some(lang_type) = lang_type {
+                    // tree doesn't exist, first insertion
+                    if let Some(tree) = parsers.parse(lang_type, text, None) {
+                        self.trees.insert(index, (tree, lang_type));
+                    }
                 }
-            } else if let Some(lang_type) = lang_type {
-                // tree doesn't exist, first insertion
-                if let Some(tree) = parsers.parse(lang_type, text, None) {
-                    self.trees.insert(index, (tree, lang_type));
-                }
-            }
-            true
-        });
+                None
+            });
     }
 
     #[allow(clippy::result_unit_err)]
@@ -317,16 +314,9 @@ impl LspFiles {
             let mut a = LocalWriter::default();
             let _ = content.write_to(&mut a);
             let content = a.content;
-            let _ = queries.lock().is_ok_and(|queries| {
-                let _ = self.add_tags_from_file(
-                    file,
-                    lang_type,
-                    &content,
-                    false,
-                    &queries,
-                    diagnostics,
-                );
-                true
+            queries.lock().ok().and_then(|queries| {
+                self.add_tags_from_file(file, lang_type, &content, false, &queries, diagnostics)
+                    .ok()
             });
             return Some(diagnostics.to_vec());
             //

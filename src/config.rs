@@ -4,13 +4,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{
     fs::read_to_string,
-    io::Error,
     path::Path,
     sync::{Arc, Mutex, MutexGuard, RwLock},
 };
 
 use crate::{htmx_tags::Tag, htmx_tree_sitter::LspFiles, init_hx::LangType, query_helper::Queries};
-use thiserror::Error;
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct HtmxConfig {
@@ -65,16 +63,19 @@ pub fn read_config(
     lsp_files: &Arc<Mutex<LspFiles>>,
     queries: &Arc<Mutex<Queries>>,
     document_map: &DashMap<String, Rope>,
-) -> Result<Vec<Tag>, ConfigError> {
+) -> anyhow::Result<Vec<Tag>> {
     if let Ok(config) = config.read() {
         if config.template_ext.is_empty() || config.template_ext.contains(' ') {
-            return Err(ConfigError::TemplateExtension);
+            return Err(anyhow::Error::msg("Template extension not found."));
         } else if !config.is_supported_backend() {
-            return Err(ConfigError::LanguageSupport(String::from(&config.lang)));
+            return Err(anyhow::Error::msg(format!(
+                "Language {} is not supported.",
+                config.lang
+            )));
         }
         walkdir(&config, lsp_files, queries, document_map)
     } else {
-        Err(ConfigError::ConfigNotFound)
+        Err(anyhow::Error::msg("Config is not found"))
     }
 }
 
@@ -83,47 +84,48 @@ fn walkdir(
     lsp_files: &Arc<Mutex<LspFiles>>,
     queries: &Arc<Mutex<Queries>>,
     document_map: &DashMap<String, Rope>,
-) -> Result<Vec<Tag>, ConfigError> {
+) -> anyhow::Result<Vec<Tag>> {
     let lsp_files = lsp_files.lock().unwrap();
     let mut diagnostics = vec![];
     lsp_files.reset();
     let directories = [&config.templates, &config.js_tags, &config.backend_tags];
-    let _ = queries.lock().is_ok_and(|mut queries| {
-        queries.change_backend(&config.lang);
-        true
-    });
+    queries
+        .lock()
+        .ok()
+        .and_then(|mut queries| queries.change_backend(&config.lang));
     for (index, dir) in directories.iter().enumerate() {
         let lang_type = LangType::from(index);
-        let _ = lsp_files.parsers.lock().is_ok_and(|mut parsers| {
-            parsers.change_backend(&config.lang, lang_type);
-            true
-        });
+        lsp_files
+            .parsers
+            .lock()
+            .ok()
+            .and_then(|mut parsers| parsers.change_backend(&config.lang, lang_type));
         for file in dir.iter() {
             for entry in walkdir::WalkDir::new(file) {
-                if let Ok(entry) = &entry {
-                    if let Ok(metadata) = &entry.metadata() {
-                        if metadata.is_file() {
-                            let path = &entry.path();
-                            let ext = config.file_ext(path);
-                            if !ext.is_some_and(|t| t == lang_type) {
-                                continue;
-                            }
-                            let _ = queries.lock().is_ok_and(|queries| {
-                                add_file(
-                                    path,
-                                    &lsp_files,
-                                    lang_type,
-                                    &queries,
-                                    &mut diagnostics,
-                                    false,
-                                    document_map,
-                                );
-                                true
-                            });
-                        }
+                let entry = entry?;
+                let metadata = entry.metadata()?;
+                if metadata.is_file() {
+                    let path = &entry.path();
+                    let ext = config.file_ext(path);
+                    if !ext.is_some_and(|ext| ext == lang_type) {
+                        continue;
                     }
+                    queries.lock().ok().and_then(|queries| {
+                        add_file(
+                            path,
+                            &lsp_files,
+                            lang_type,
+                            &queries,
+                            &mut diagnostics,
+                            false,
+                            document_map,
+                        )
+                    });
                 } else {
-                    return Err(ConfigError::TemplatePath(String::from(file)));
+                    return Err(anyhow::Error::msg(format!(
+                        "Template path: {} does not exist",
+                        file
+                    )));
                 }
             }
         }
@@ -143,31 +145,13 @@ fn add_file(
     if let Ok(name) = std::fs::canonicalize(path) {
         let name = name.to_str()?;
         let file = lsp_files.add_file(format!("file://{}", name))?;
-        let _ = read_to_string(name).is_ok_and(|content| {
+        return read_to_string(name).ok().and_then(|content| {
             let rope = ropey::Rope::from_str(&content);
             document_map.insert(format!("file://{}", name).to_string(), rope);
             lsp_files.add_tree(file, Some(lang_type), &content, None);
             let _ = lsp_files.add_tags_from_file(file, lang_type, &content, false, queries, diags);
-            true
+            None
         });
     }
     None
-}
-
-#[derive(Error, Debug)]
-pub enum ConfigError {
-    #[error("Template path: {0} does not exist")]
-    TemplatePath(String),
-    #[error("Language {0} is not supported")]
-    LanguageSupport(String),
-    #[error("Template extension is empty")]
-    TemplateExtension,
-    #[error("Config is not found")]
-    ConfigNotFound,
-}
-
-impl From<Error> for ConfigError {
-    fn from(_value: Error) -> Self {
-        todo!()
-    }
 }

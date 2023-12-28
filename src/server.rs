@@ -59,10 +59,10 @@ impl BackendHtmx {
         let rope = ropey::Rope::from_str(&params.text);
         self.document_map
             .insert(params.uri.to_string(), rope.clone());
-        let _ = self.lsp_files.lock().is_ok_and(|lsp_files| {
-            lsp_files.on_change(params);
-            true
-        });
+        self.lsp_files
+            .lock()
+            .ok()
+            .and_then(|lsp_files| lsp_files.on_change(params));
     }
 
     fn on_remove(&self, range: &Range, rope: &mut RefMut<'_, String, Rope>) -> Option<()> {
@@ -85,10 +85,13 @@ impl BackendHtmx {
     async fn publish_tag_diagnostics(&self, diagnostics: Vec<Tag>, file: Option<String>) {
         let mut hm: HashMap<String, Vec<Diagnostic>> = HashMap::new();
         let len = diagnostics.len();
-        let _ = self.lsp_files.lock().is_ok_and(|lsp_files| {
-            lsp_files.publish_tag_diagnostics(diagnostics, &mut hm);
-            true
-        });
+        self.lsp_files
+            .lock()
+            .ok()
+            .and_then(|lsp_files| -> Option<()> {
+                lsp_files.publish_tag_diagnostics(diagnostics, &mut hm);
+                None
+            });
         for (url, diagnostics) in hm {
             if let Ok(uri) = Url::parse(&url) {
                 self.client
@@ -114,10 +117,8 @@ impl BackendHtmx {
             } = position
             {
                 if &name == "hx-lsp" {
-                    let _ = self.lsp_files.lock().is_ok_and(|lsp_files| {
-                        lsp_files
-                            .goto_definition_response(definition, &value, &mut def)
-                            .is_some()
+                    self.lsp_files.lock().ok().and_then(|lsp_files| {
+                        lsp_files.goto_definition_response(definition, &value, &mut def)
                     });
                 }
             }
@@ -144,14 +145,18 @@ impl LanguageServer for BackendHtmx {
         }
         match validate_config(params.initialization_options) {
             Some(htmx_config) => {
-                let _ = self.htmx_config.try_write().is_ok_and(|mut config| {
-                    definition_provider = Some(OneOf::Left(true));
-                    references_provider = Some(OneOf::Left(true));
-                    code_action_provider = Some(CodeActionProviderCapability::Simple(true));
-                    implementation_provider = Some(ImplementationProviderCapability::Simple(true));
-                    *config = htmx_config;
-                    true
-                });
+                self.htmx_config
+                    .try_write()
+                    .ok()
+                    .and_then(|mut config| -> Option<()> {
+                        definition_provider = Some(OneOf::Left(true));
+                        references_provider = Some(OneOf::Left(true));
+                        code_action_provider = Some(CodeActionProviderCapability::Simple(true));
+                        implementation_provider =
+                            Some(ImplementationProviderCapability::Simple(true));
+                        *config = htmx_config;
+                        None
+                    });
             }
             None => {
                 self.client
@@ -211,10 +216,14 @@ impl LanguageServer for BackendHtmx {
                 self.publish_tag_diagnostics(diagnostics, None).await;
             }
             Err(err) => {
-                let _ = self.htmx_config.write().is_ok_and(|mut config| {
-                    config.is_valid = false;
-                    true
-                });
+                let _ = self
+                    .htmx_config
+                    .write()
+                    .ok()
+                    .and_then(|mut config| -> Option<()> {
+                        config.is_valid = false;
+                        None
+                    });
                 let msg = err.to_string();
                 self.client.log_message(MessageType::INFO, msg).await;
             }
@@ -263,10 +272,10 @@ impl LanguageServer for BackendHtmx {
                     }
                     let mut w = LocalWriter::default();
                     let _ = rope.write_to(&mut w);
-                    let _ = self.lsp_files.lock().is_ok_and(|lsp_files| {
-                        lsp_files.input_edit(uri, w.content, input_edit);
-                        true
-                    });
+                    self.lsp_files
+                        .lock()
+                        .ok()
+                        .and_then(|lsp_files| lsp_files.input_edit(uri, w.content, input_edit));
                 }
             }
         }
@@ -312,17 +321,15 @@ impl LanguageServer for BackendHtmx {
             true => return Ok(None),
             false => (),
         }
-        let mut result = None;
-        let _ = self.queries.lock().is_ok_and(|queries| {
-            result = get_position_from_lsp_completion(
+        let result = self.queries.lock().ok().and_then(|queries| {
+            get_position_from_lsp_completion(
                 &params.text_document_position,
                 &self.document_map,
                 uri.to_string(),
                 QueryType::Completion,
                 &self.lsp_files,
                 &queries.html,
-            );
-            true
+            )
         });
 
         if let Some(result) = result {
@@ -367,17 +374,15 @@ impl LanguageServer for BackendHtmx {
 
     async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
         let uri = &params.text_document_position_params.text_document.uri;
-        let mut result = None;
-        let _ = self.queries.lock().is_ok_and(|queries| {
-            result = get_position_from_lsp_completion(
+        let result = self.queries.lock().ok().and_then(|queries| {
+            get_position_from_lsp_completion(
                 &params.text_document_position_params,
                 &self.document_map,
                 uri.to_string(),
                 QueryType::Hover,
                 &self.lsp_files,
                 &queries.html,
-            );
-            true
+            )
         });
 
         if let Some(result) = result {
@@ -427,9 +432,8 @@ impl LanguageServer for BackendHtmx {
         &self,
         params: GotoDefinitionParams,
     ) -> Result<Option<GotoDefinitionResponse>> {
-        let mut res: Result<Option<GotoDefinitionResponse>> = Ok(None);
-        let _tree = self.lsp_files.lock().is_ok_and(|lsp_files| {
-            let _ = self.queries.lock().is_ok_and(|queries| {
+        let res = self.lsp_files.lock().ok().and_then(|lsp_files| {
+            self.queries.lock().ok().and_then(|queries| {
                 let position = lsp_files.goto_definition(
                     params,
                     &self.htmx_config,
@@ -438,12 +442,10 @@ impl LanguageServer for BackendHtmx {
                 );
                 drop(queries);
                 drop(lsp_files);
-                res = Ok(self.check_definition(position));
-                true
-            });
-            true
+                self.check_definition(position)
+            })
         });
-        res
+        Ok(res)
     }
 
     async fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
@@ -452,14 +454,13 @@ impl LanguageServer for BackendHtmx {
             if !config.is_valid {
                 return Ok(locations);
             }
-            let _ = self.lsp_files.lock().is_ok_and(|lsp_files| {
-                let _ = self.queries.lock().is_ok_and(|queries| {
-                    locations = lsp_files.references(params, &queries, &self.document_map);
-                    true
-                });
-                true
-            });
         }
+        locations = self.lsp_files.lock().ok().and_then(|lsp_files| {
+            self.queries
+                .lock()
+                .ok()
+                .and_then(|queries| lsp_files.references(params, &queries, &self.document_map))
+        });
         Ok(locations)
     }
 
@@ -472,12 +473,10 @@ impl LanguageServer for BackendHtmx {
             if !config.is_valid {
                 return Ok(res);
             }
-            let _ = self.lsp_files.lock().is_ok_and(|lsp_files| {
-                let _ = self.queries.lock().is_ok_and(|queries| {
-                    res = lsp_files.goto_implementation(params, &queries, &self.document_map);
-                    true
-                });
-                true
+            res = self.lsp_files.lock().ok().and_then(|lsp_files| {
+                self.queries.lock().ok().and_then(|queries| {
+                    lsp_files.goto_implementation(params, &queries, &self.document_map)
+                })
             });
         }
         Ok(res)

@@ -43,7 +43,7 @@ impl Queries {
         }
     }
 
-    pub fn change_backend(&mut self, lang: &str) {
+    pub fn change_backend(&mut self, lang: &str) -> Option<()> {
         let lang = match lang {
             "python" => Some((tree_sitter_python::language(), HX_PYTHON_TAGS)),
             "go" => Some((tree_sitter_go::language(), HX_GO_TAGS)),
@@ -52,6 +52,7 @@ impl Queries {
         if let Some(lang) = lang {
             self.backend = Query::new(lang.0, lang.1).unwrap();
         }
+        None
     }
 }
 
