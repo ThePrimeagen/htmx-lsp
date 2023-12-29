@@ -12,8 +12,8 @@ use dashmap::{
 use ropey::Rope;
 use tower_lsp::lsp_types::{
     request::{GotoImplementationParams, GotoImplementationResponse},
-    Diagnostic, DiagnosticSeverity, GotoDefinitionParams, GotoDefinitionResponse, Location,
-    Position, Range, ReferenceParams, Url,
+    CodeActionParams, Diagnostic, DiagnosticSeverity, GotoDefinitionParams, GotoDefinitionResponse,
+    Location, Position, Range, ReferenceParams, Url,
 };
 use tree_sitter::{InputEdit, Parser, Point, Query, Tree};
 
@@ -428,6 +428,60 @@ impl LspFiles {
         };
         let range = Range { start, end };
         Some(GotoImplementationResponse::Scalar(Location { uri, range }))
+    }
+
+    pub fn code_action(
+        &self,
+        params: CodeActionParams,
+        config: &RwLock<HtmxConfig>,
+        query: &HTMLQueries2,
+        document_map: &DashMap<String, Rope>,
+    ) -> Option<()> {
+        let uri = String::from(&params.text_document.uri.to_string());
+        let ext = config.read().is_ok_and(|config| {
+            if !config.is_valid {
+                return false;
+            }
+            let ext = config.file_ext(Path::new(&uri));
+            ext.is_some_and(|lang_type| lang_type == LangType::Template)
+        });
+        if !ext {
+            return None;
+        }
+        let text = {
+            let c = document_map.get(&uri)?;
+            let mut w = LocalWriter::default();
+            let _ = c.value().write_to(&mut w);
+            w
+        };
+        let index = self.get_index(&uri)?;
+        let tree = self.get_tree(index)?;
+        let root_node = tree.0.root_node();
+        let pos = params.range.start;
+        let trigger_point = Point::new(pos.line as usize, pos.character as usize);
+        let position = query_position(
+            root_node,
+            &text.content,
+            trigger_point,
+            QueryType::Definition,
+            query,
+        )?;
+        match position {
+            PositionType::AttributeName(name) => {
+                if name == "hx-lsp" {
+                    Some(())
+                } else {
+                    None
+                }
+            }
+            PositionType::AttributeValue { name, .. } => {
+                if name == "hx-lsp" {
+                    Some(())
+                } else {
+                    None
+                }
+            }
+        }
     }
 
     pub fn query_position(

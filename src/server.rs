@@ -11,17 +11,20 @@ use dashmap::mapref::one::RefMut;
 use dashmap::DashMap;
 use ropey::Rope;
 
+use serde_json::Value;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::request::{GotoImplementationParams, GotoImplementationResponse};
 use tower_lsp::lsp_types::{
-    CodeActionParams, CodeActionProviderCapability, CodeActionResponse, CompletionContext,
-    CompletionItem, CompletionItemKind, CompletionOptions, CompletionParams, CompletionResponse,
+    CodeAction, CodeActionKind, CodeActionOrCommand, CodeActionParams,
+    CodeActionProviderCapability, CodeActionResponse, Command, CompletionContext, CompletionItem,
+    CompletionItemKind, CompletionOptions, CompletionParams, CompletionResponse,
     CompletionTriggerKind, Diagnostic, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
-    DidOpenTextDocumentParams, DidSaveTextDocumentParams, Documentation, GotoDefinitionParams,
-    GotoDefinitionResponse, Hover, HoverContents, HoverParams, HoverProviderCapability,
-    ImplementationProviderCapability, InitializedParams, Location, MarkupContent, MarkupKind,
-    MessageType, OneOf, Range, ReferenceParams, ServerCapabilities, TextDocumentSyncCapability,
-    TextDocumentSyncKind, TextDocumentSyncOptions, TextDocumentSyncSaveOptions, Url,
+    DidOpenTextDocumentParams, DidSaveTextDocumentParams, Documentation, ExecuteCommandOptions,
+    ExecuteCommandParams, GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverContents,
+    HoverParams, HoverProviderCapability, ImplementationProviderCapability, InitializedParams,
+    Location, MarkupContent, MarkupKind, MessageType, OneOf, Range, ReferenceParams,
+    ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
+    TextDocumentSyncSaveOptions, Url,
 };
 use tower_lsp::lsp_types::{InitializeParams, ServerInfo};
 use tower_lsp::{lsp_types::InitializeResult, Client, LanguageServer};
@@ -136,6 +139,8 @@ impl LanguageServer for BackendHtmx {
         let mut references_provider = None;
         let mut code_action_provider = None;
         let mut implementation_provider = None;
+        let mut execute_command_provider = None;
+
         if let Some(client_info) = params.client_info {
             if client_info.name == "helix" {
                 if let Ok(mut can_complete) = self.can_complete.write() {
@@ -154,6 +159,10 @@ impl LanguageServer for BackendHtmx {
                         code_action_provider = Some(CodeActionProviderCapability::Simple(true));
                         implementation_provider =
                             Some(ImplementationProviderCapability::Simple(true));
+                        execute_command_provider = Some(ExecuteCommandOptions {
+                            commands: vec!["reset_tags".to_string()],
+                            ..Default::default()
+                        });
                         *config = htmx_config;
                         None
                     });
@@ -191,11 +200,12 @@ impl LanguageServer for BackendHtmx {
                 references_provider,
                 code_action_provider,
                 implementation_provider,
+                execute_command_provider,
                 ..ServerCapabilities::default()
             },
             server_info: Some(ServerInfo {
                 name: String::from("htmx-lsp"),
-                version: Some(String::from("0.1.2")),
+                version: Some(String::from("0.1.3")),
             }),
             offset_encoding: None,
         })
@@ -482,13 +492,62 @@ impl LanguageServer for BackendHtmx {
         Ok(res)
     }
 
-    async fn code_action(&self, _params: CodeActionParams) -> Result<Option<CodeActionResponse>> {
-        Ok(None)
+    async fn code_action(&self, params: CodeActionParams) -> Result<Option<CodeActionResponse>> {
+        let mut res = None;
+        if let Ok(config) = self.htmx_config.read() {
+            if !config.is_valid {
+                return Ok(None);
+            }
+        }
+        let position = self.lsp_files.lock().ok().and_then(|lsp_files| {
+            self.queries.lock().ok().and_then(|queries| {
+                lsp_files.code_action(params, &self.htmx_config, &queries.html, &self.document_map)
+            })
+        });
+        if position.is_some() {
+            res = Some(code_actions());
+        }
+
+        Ok(res)
+    }
+
+    async fn execute_command(&self, params: ExecuteCommandParams) -> Result<Option<Value>> {
+        let mut res = None;
+        let command = params.command;
+        if command == "reset_tags" {
+            let diags = read_config(
+                &self.htmx_config,
+                &self.lsp_files,
+                &self.queries,
+                &self.document_map,
+            );
+            if let Ok(diags) = diags {
+                self.publish_tag_diagnostics(diags, None).await;
+                res = Some(Value::String("Tags are reloaded".to_string()));
+            }
+        }
+        Ok(res)
     }
 
     async fn shutdown(&self) -> Result<()> {
         Ok(())
     }
+}
+
+pub fn code_actions() -> Vec<CodeActionOrCommand> {
+    let mut commands = vec![];
+    let command = ("Reset tags", "reset_tags");
+    commands.push(CodeActionOrCommand::CodeAction(CodeAction {
+        title: command.0.to_string(),
+        kind: Some(CodeActionKind::EMPTY),
+        command: Some(Command::new(
+            command.1.to_string(),
+            command.1.to_string(),
+            None,
+        )),
+        ..Default::default()
+    }));
+    commands
 }
 
 pub struct ServerTextDocumentItem {
