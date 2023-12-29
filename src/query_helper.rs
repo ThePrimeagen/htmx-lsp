@@ -284,8 +284,8 @@ pub fn query_tag(
     let mut tags = vec![];
     for comment in comments {
         if let Some(mut tag) = get_tag(&comment.1.value) {
-            tag.line = comment.1.start_position.row;
-            tag.end = comment.1.end_position.column;
+            tag.start.row = comment.1.start_position.row;
+            tag.end.row = comment.1.start_position.row;
             tags.push(tag);
         }
     }

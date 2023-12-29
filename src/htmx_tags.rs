@@ -2,18 +2,17 @@ use tree_sitter::Point;
 
 use crate::position::PositionDefinition;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Ord, Eq, PartialEq, PartialOrd)]
 pub struct Tag {
+    pub start: Point,
+    pub end: Point,
     pub name: String,
-    pub start: usize,
-    pub end: usize,
     pub file: usize,
-    pub line: usize,
 }
 
 pub fn in_tag(line: &str, point: Point) -> Option<Tag> {
     let tag = get_tag(line)?;
-    if point.column >= tag.start && point.column <= tag.end {
+    if point >= tag.start && point <= tag.end {
         return Some(tag);
     }
     None
@@ -30,10 +29,9 @@ pub fn get_tag(line: &str) -> Option<Tag> {
     let end = start + 2 + first.len();
     Some(Tag {
         name: first.to_string(),
-        start,
-        end,
+        start: Point::new(0, start),
+        end: Point::new(0, end),
         file: 0,
-        line: 0,
     })
 }
 
@@ -49,10 +47,9 @@ pub fn get_tags(value: &str, mut start_char: usize, line: usize) -> Option<Vec<T
         start_char = end + 2;
         let tag = Tag {
             name: String::from(part),
-            start,
-            end,
+            start: Point::new(line, start),
+            end: Point::new(line, end),
             file: 0,
-            line,
         };
         tags.push(tag);
     }
@@ -62,7 +59,8 @@ pub fn get_tags(value: &str, mut start_char: usize, line: usize) -> Option<Vec<T
 pub fn in_tags(value: &str, definition: PositionDefinition) -> Option<Tag> {
     let tags = get_tags(value, definition.start, definition.line)?;
     for tag in tags {
-        let t = definition.point.column >= tag.start && definition.point.column <= tag.end;
+        let t =
+            definition.point.column >= tag.start.row && definition.point.column <= tag.end.column;
         if t {
             return Some(tag);
         }

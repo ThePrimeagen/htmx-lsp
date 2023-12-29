@@ -1,6 +1,8 @@
 use ropey::Rope;
-use tower_lsp::lsp_types::Range;
+use tower_lsp::lsp_types::{Position, Range};
 use tree_sitter::{InputEdit, Point};
+
+use crate::htmx_tags::Tag;
 
 pub trait ToInputEdit {
     fn to_point(&self) -> (Point, Point);
@@ -37,4 +39,11 @@ impl ToInputEdit for Range {
             new_end_position,
         }
     }
+}
+
+pub fn to_position(tag: &Tag) -> (Position, Position) {
+    (
+        Position::new(tag.start.row as u32, tag.start.column as u32),
+        Position::new(tag.end.row as u32, tag.end.column as u32),
+    )
 }

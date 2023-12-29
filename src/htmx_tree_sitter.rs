@@ -28,6 +28,7 @@ use crate::{
         Queries,
     },
     server::{LocalWriter, ServerTextDocumentItem},
+    to_input_edit::to_position,
 };
 
 type FileName = usize;
@@ -144,11 +145,9 @@ impl LspFiles {
     ) {
         for diag in diagnostics {
             if let Some(uri) = self.get_uri(diag.file) {
+                let position = to_position(&diag);
                 let diagnostic = Diagnostic {
-                    range: Range::new(
-                        Position::new(diag.line as u32, diag.start as u32),
-                        Position::new(diag.line as u32, diag.end as u32),
-                    ),
+                    range: Range::new(position.0, position.1),
                     severity: Some(DiagnosticSeverity::WARNING),
                     message: String::from("This tag already exist."),
                     source: Some(String::from("htmx-lsp")),
@@ -222,8 +221,7 @@ impl LspFiles {
         let tag = in_tags(value, definition?)?;
         let tag = self.get_tag(&tag.name)?;
         let file = self.get_uri(tag.file)?;
-        let start = Position::new(tag.line as u32, tag.start as u32);
-        let end = Position::new(tag.line as u32, tag.end as u32);
+        let (start, end) = to_position(&tag);
         let range = Range::new(start, end);
         *def = Some(GotoDefinitionResponse::Scalar(Location {
             uri: Url::parse(&file).unwrap(),
@@ -372,11 +370,12 @@ impl LspFiles {
                     );
                 }
             }
+            references.sort();
             let mut response = vec![];
             for i in &references {
                 let index = self.get_uri(i.file)?;
-                let start = Position::new(i.line as u32, i.start as u32);
-                let end = Position::new(i.line as u32, i.end as u32 + 1);
+                let (start, mut end) = to_position(i);
+                end.character += 1;
                 let range = Range::new(start, end);
                 let location = Location::new(Url::parse(&index).unwrap(), range);
                 response.push(location);

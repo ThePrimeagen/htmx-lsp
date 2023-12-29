@@ -110,22 +110,27 @@ fn walkdir(
                     if !ext.is_some_and(|ext| ext == lang_type) {
                         continue;
                     }
-                    queries.lock().ok().and_then(|queries| {
-                        add_file(
-                            path,
-                            &lsp_files,
-                            lang_type,
-                            &queries,
-                            &mut diagnostics,
-                            false,
-                            document_map,
-                        )
-                    });
-                } else {
-                    return Err(anyhow::Error::msg(format!(
-                        "Template path: {} does not exist",
-                        file
-                    )));
+                    if queries
+                        .lock()
+                        .ok()
+                        .and_then(|queries| {
+                            add_file(
+                                path,
+                                &lsp_files,
+                                lang_type,
+                                &queries,
+                                &mut diagnostics,
+                                false,
+                                document_map,
+                            )
+                        })
+                        .is_none()
+                    {
+                        return Err(anyhow::Error::msg(format!(
+                            "Template path: {} does not exist",
+                            file
+                        )));
+                    };
                 }
             }
         }
@@ -141,16 +146,16 @@ fn add_file(
     diags: &mut Vec<Tag>,
     _skip: bool,
     document_map: &DashMap<String, Rope>,
-) -> Option<()> {
+) -> Option<bool> {
     if let Ok(name) = std::fs::canonicalize(path) {
         let name = name.to_str()?;
         let file = lsp_files.add_file(format!("file://{}", name))?;
-        return read_to_string(name).ok().and_then(|content| {
+        return read_to_string(name).ok().map(|content| {
             let rope = ropey::Rope::from_str(&content);
             document_map.insert(format!("file://{}", name).to_string(), rope);
             lsp_files.add_tree(file, Some(lang_type), &content, None);
             let _ = lsp_files.add_tags_from_file(file, lang_type, &content, false, queries, diags);
-            None
+            true
         });
     }
     None

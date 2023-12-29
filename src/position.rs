@@ -23,9 +23,9 @@ pub enum QueryType {
 
 #[derive(Debug, Clone)]
 pub struct CaptureDetails {
-    pub value: String,
-    pub end_position: Point,
     pub start_position: Point,
+    pub end_position: Point,
+    pub value: String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
