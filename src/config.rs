@@ -8,7 +8,12 @@ use std::{
     sync::{Arc, Mutex, MutexGuard, RwLock},
 };
 
-use crate::{htmx_tags::Tag, htmx_tree_sitter::LspFiles, init_hx::LangType, query_helper::Queries};
+use crate::{
+    htmx_tags::Tag,
+    htmx_tree_sitter::LspFiles,
+    init_hx::{LangType, LangTypes},
+    query_helper::Queries,
+};
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct HtmxConfig {
@@ -31,13 +36,22 @@ impl HtmxConfig {
         }
     }
 
-    pub fn file_ext(&self, path: &Path) -> Option<LangType> {
+    pub fn file_ext(&self, path: &Path) -> Option<LangTypes> {
         match path.extension()?.to_str() {
             Some(e) => match e {
-                "js" | "ts" => Some(LangType::JavaScript),
-                backend if self.is_backend(backend) => Some(LangType::Backend),
-                template if template == self.template_ext => Some(LangType::Template),
-                _ => None,
+                "js" | "ts" => Some(LangTypes::One(LangType::JavaScript)),
+                other => {
+                    if self.is_backend(other) {
+                        match self.template_ext == other {
+                            true => Some(LangTypes::two((LangType::Backend, LangType::Template))),
+                            false => Some(LangTypes::one(LangType::Backend)),
+                        }
+                    } else if other == self.template_ext {
+                        Some(LangTypes::one(LangType::Template))
+                    } else {
+                        None
+                    }
+                }
             },
             None => None,
         }
@@ -107,7 +121,7 @@ fn walkdir(
                 if metadata.is_file() {
                     let path = &entry.path();
                     let ext = config.file_ext(path);
-                    if !ext.is_some_and(|ext| ext == lang_type) {
+                    if !ext.is_some_and(|ext| ext.is_lang(lang_type)) {
                         continue;
                     }
                     if queries
@@ -153,7 +167,7 @@ fn add_file(
         return read_to_string(name).ok().map(|content| {
             let rope = ropey::Rope::from_str(&content);
             document_map.insert(format!("file://{}", name).to_string(), rope);
-            lsp_files.add_tree(file, Some(lang_type), &content, None);
+            lsp_files.add_tree(file, lang_type, &content, None);
             let _ = lsp_files.add_tags_from_file(file, lang_type, &content, false, queries, diags);
             true
         });

@@ -217,29 +217,44 @@ pub enum LangType {
     Backend,
 }
 
+pub enum LangTypes {
+    One(LangType),
+    Two { first: LangType, second: LangType },
+}
+
+impl LangTypes {
+    pub fn one(lang_type: LangType) -> Self {
+        Self::One(lang_type)
+    }
+
+    pub fn two(lang_types: (LangType, LangType)) -> Self {
+        Self::Two {
+            first: lang_types.0,
+            second: lang_types.1,
+        }
+    }
+
+    pub fn is_lang(&self, lang_type: LangType) -> bool {
+        match self {
+            LangTypes::One(lang) => lang == &lang_type,
+            LangTypes::Two { first, second } => first == &lang_type || second == &lang_type,
+        }
+    }
+
+    pub fn get(&self) -> LangType {
+        match self {
+            LangTypes::One(lang) => *lang,
+            LangTypes::Two { first, .. } => *first,
+        }
+    }
+}
+
 impl From<usize> for LangType {
     fn from(value: usize) -> Self {
         match value {
             0 => LangType::Template,
             1 => LangType::JavaScript,
             2 => LangType::Backend,
-            _ => LangType::Backend,
-        }
-    }
-}
-
-// impl From<(&HtmxConfig)> for LangType {
-//     fn from(value: &HtmxConfig) -> Self {
-//         // match c[]
-//     }
-// }
-
-impl From<(&str, &str, &str)> for LangType {
-    fn from(value: (&str, &str, &str)) -> Self {
-        // file, template, backend
-        match value.0 {
-            "js" | "ts" => LangType::JavaScript,
-            template if template == value.1 => LangType::Template,
             _ => LangType::Backend,
         }
     }

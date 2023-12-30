@@ -20,29 +20,26 @@ use tree_sitter::{InputEdit, Parser, Point, Query, Tree};
 use crate::{
     config::HtmxConfig,
     htmx_tags::{in_tags, Tag},
-    init_hx::LangType,
+    init_hx::{LangType, LangTypes},
     position::{query_position, Position as PositionType, PositionDefinition, QueryType},
     queries::{HX_JS_TAGS, HX_RUST_TAGS},
     query_helper::{
         find_hx_lsp, query_htmx_lsp, query_tag, HTMLQueries as HTMLQueries2, HTMLQuery, HtmxQuery,
         Queries,
     },
-    server::{LocalWriter, ServerTextDocumentItem},
+    server::{FileWriter, ServerTextDocumentItem},
     to_input_edit::to_position,
 };
 
 type FileName = usize;
 
-#[derive(Debug)]
-pub struct BackendTreeSitter {
-    pub tree: Tree,
-}
-
 #[derive(Clone)]
 pub struct LspFiles {
     current: RefCell<usize>,
     indexes: DashMap<String, FileName>,
-    trees: DashMap<FileName, (Tree, LangType)>,
+    template: DashMap<FileName, Tree>,
+    javascript: DashMap<FileName, Tree>,
+    backend: DashMap<FileName, Tree>,
     pub parsers: Arc<Mutex<Parsers>>,
     pub tags: DashMap<String, Tag>,
 }
@@ -52,9 +49,11 @@ impl Default for LspFiles {
         Self {
             current: RefCell::new(0),
             indexes: DashMap::new(),
-            trees: DashMap::new(),
             parsers: Arc::new(Mutex::new(Parsers::default())),
             tags: DashMap::new(),
+            template: DashMap::new(),
+            javascript: DashMap::new(),
+            backend: DashMap::new(),
         }
     }
 }
@@ -62,7 +61,9 @@ impl Default for LspFiles {
 impl LspFiles {
     pub fn reset(&self) {
         self.indexes.clear();
-        self.trees.clear();
+        self.template.clear();
+        self.javascript.clear();
+        self.backend.clear();
         self.tags.clear();
     }
 
@@ -93,12 +94,14 @@ impl LspFiles {
     }
 
     pub fn add_file(&self, key: String) -> Option<usize> {
-        if self.get_index(&key).is_none() {
-            let old = self.current.replace_with(|&mut old| old + 1);
-            self.indexes.insert(key, old);
-            return Some(old);
+        match self.get_index(&key) {
+            Some(index) => Some(index),
+            None => {
+                let old = self.current.replace_with(|&mut old| old + 1);
+                self.indexes.insert(key, old);
+                Some(old)
+            }
         }
-        None
     }
 
     pub fn get_index(&self, file: &String) -> Option<usize> {
@@ -119,22 +122,9 @@ impl LspFiles {
         })
     }
 
-    pub fn on_change(&self, params: ServerTextDocumentItem) -> Option<()> {
-        let file = self.get_index(&params.uri.to_string())?;
-        self.add_tree(file, None, &params.text, None);
-        None
-    }
-
-    pub fn input_edit(&self, file: &String, code: String, input_edit: InputEdit) -> Option<()> {
-        let file = self.get_index(file)?;
-        let mut old_tree = self.get_mut_tree(file)?;
-        let _ = self.parsers.lock().ok().and_then(|mut parsers| {
-            old_tree.0.edit(&input_edit);
-            let tree = parsers.parse(old_tree.1, &code, Some(&old_tree.0))?;
-            let lang = old_tree.1;
-            drop(old_tree);
-            self.trees.insert(file, (tree, lang))
-        });
+    pub fn after_open(&self, _params: ServerTextDocumentItem) -> Option<()> {
+        // let file = self.get_index(&params.uri.to_string())?;
+        // self.add_tree(file, None, &params.text, None);
         None
     }
 
@@ -183,21 +173,21 @@ impl LspFiles {
                 return false;
             }
             let ext = config.file_ext(Path::new(&file));
-            ext.is_some_and(|lang_type| lang_type == LangType::Template)
+            ext.is_some_and(|lang_types| lang_types.is_lang(LangType::Template))
         });
         if !ext {
             return None;
         }
         let text = {
             let c = document_map.get(&file)?;
-            let mut w = LocalWriter::default();
+            let mut w = FileWriter::default();
             let _ = c.value().write_to(&mut w);
             w
         };
         let index = self.get_index(&file);
         if let Some(index) = index {
-            if let Some(tree) = self.get_tree(index) {
-                let root_node = tree.0.root_node();
+            if let Some(tree) = self.get_tree(LangType::Template, index) {
+                let root_node = tree.root_node();
                 let pos = params.text_document_position_params.position;
                 let trigger_point = Point::new(pos.line as usize, pos.character as usize);
                 return query_position(
@@ -230,35 +220,6 @@ impl LspFiles {
         None
     }
 
-    /// LangType is None when it comes from editor.
-    pub fn add_tree(
-        &self,
-        index: usize,
-        lang_type: Option<LangType>,
-        text: &str,
-        _range: Option<Range>,
-    ) {
-        let _ = self
-            .parsers
-            .lock()
-            .ok()
-            .and_then(|mut parsers| -> Option<()> {
-                if let Some(old_tree) = self.trees.get_mut(&index) {
-                    if let Some(tree) = parsers.parse(old_tree.1, text, Some(&old_tree.0)) {
-                        let lang = old_tree.1;
-                        drop(old_tree);
-                        self.trees.insert(index, (tree, lang));
-                    }
-                } else if let Some(lang_type) = lang_type {
-                    // tree doesn't exist, first insertion
-                    if let Some(tree) = parsers.parse(lang_type, text, None) {
-                        self.trees.insert(index, (tree, lang_type));
-                    }
-                }
-                None
-            });
-    }
-
     #[allow(clippy::result_unit_err)]
     pub fn add_tags_from_file(
         &self,
@@ -271,9 +232,9 @@ impl LspFiles {
     ) -> Result<(), ()> {
         let query = HtmxQuery::try_from(lang_type)?;
         let query = queries.get(query);
-        if let Some(old_tree) = self.trees.get(&index) {
+        if let Some(old_tree) = self.get_tree(lang_type, index) {
             let tags = query_tag(
-                old_tree.0.root_node(),
+                old_tree.root_node(),
                 text,
                 Point::new(0, 0),
                 &QueryType::Completion,
@@ -302,24 +263,24 @@ impl LspFiles {
     ) -> Option<Vec<Tag>> {
         let path = Path::new(&uri);
         let file = self.get_index(uri)?;
+        let mut lang_type = LangType::Template;
         if let Ok(config) = config.read() {
-            let lang_type = config.file_ext(path)?;
+            let lang_types = config.file_ext(path)?;
+            lang_type = lang_types.get();
             if lang_type == LangType::Template {
                 return None;
             }
-            let content = document_map.get(uri)?;
-            let content = content.value();
-            let mut a = LocalWriter::default();
-            let _ = content.write_to(&mut a);
-            let content = a.content;
-            queries.lock().ok().and_then(|queries| {
-                self.add_tags_from_file(file, lang_type, &content, false, &queries, diagnostics)
-                    .ok()
-            });
-            return Some(diagnostics.to_vec());
-            //
         }
-        None
+        let content = document_map.get(uri)?;
+        let content = content.value();
+        let mut a = FileWriter::default();
+        let _ = content.write_to(&mut a);
+        let content = a.content;
+        queries.lock().ok().and_then(|queries| {
+            self.add_tags_from_file(file, lang_type, &content, false, &queries, diagnostics)
+                .ok()
+        });
+        Some(diagnostics.to_vec())
     }
 
     pub fn references(
@@ -327,6 +288,7 @@ impl LspFiles {
         params: ReferenceParams,
         queries: &Queries,
         document_map: &DashMap<String, Rope>,
+        lang_type: LangType,
     ) -> Option<Vec<Location>> {
         let mut locations = None;
         let uri = String::from(&params.text_document_position.text_document.uri.to_string());
@@ -335,15 +297,15 @@ impl LspFiles {
             params.text_document_position.position.character as usize,
         );
         let index = self.get_index(&uri)?;
-        let tree = self.get_tree(index)?;
-        if let Ok(c) = HtmxQuery::try_from(tree.1) {
+        let tree = self.get_tree(lang_type, index)?;
+        if let Ok(c) = HtmxQuery::try_from(lang_type) {
             let query = queries.get(c);
             let content = document_map.get(&uri)?;
-            let mut w = LocalWriter::default();
+            let mut w = FileWriter::default();
             let _ = content.value().write_to(&mut w);
             drop(content);
             let tags = query_tag(
-                tree.0.root_node(),
+                tree.root_node(),
                 &w.content,
                 point,
                 &QueryType::Completion,
@@ -352,23 +314,21 @@ impl LspFiles {
             );
             let tag = tags.first()?;
             let mut references = vec![];
-            for tree in self.trees.iter() {
-                if tree.1 == LangType::Template {
-                    let file = self.get_uri(*tree.key())?;
-                    let mut w = LocalWriter::default();
-                    let content = document_map.get(&file)?;
-                    let _ = content.value().write_to(&mut w);
-                    query_htmx_lsp(
-                        tree.0.root_node(),
-                        &w.content,
-                        Point::new(0, 0),
-                        &QueryType::Hover,
-                        queries.html.get(HTMLQuery::Lsp),
-                        &tag.name,
-                        &mut references,
-                        *tree.key(),
-                    );
-                }
+            for tree in self.template.iter() {
+                let file = self.get_uri(*tree.key())?;
+                let mut w = FileWriter::default();
+                let content = document_map.get(&file)?;
+                let _ = content.value().write_to(&mut w);
+                query_htmx_lsp(
+                    tree.root_node(),
+                    &w.content,
+                    Point::new(0, 0),
+                    &QueryType::Hover,
+                    queries.html.get(HTMLQuery::Lsp),
+                    &tag.name,
+                    &mut references,
+                    *tree.key(),
+                );
             }
             references.sort();
             let mut response = vec![];
@@ -390,7 +350,11 @@ impl LspFiles {
         params: GotoImplementationParams,
         queries: &Queries,
         document_map: &DashMap<String, Rope>,
+        lang_type: LangTypes,
     ) -> Option<GotoImplementationResponse> {
+        if !lang_type.is_lang(LangType::Template) {
+            return None;
+        }
         let uri = String::from(
             &params
                 .text_document_position_params
@@ -403,13 +367,10 @@ impl LspFiles {
             params.text_document_position_params.position.character as usize,
         );
         let index = self.get_index(&uri)?;
-        let tree = self.get_tree(index)?;
-        if tree.1 != LangType::Template {
-            return None;
-        }
+        let tree = self.get_tree(LangType::Template, index)?;
         let query = queries.html.get(HTMLQuery::Lsp);
         let content = document_map.get(&uri)?;
-        let mut w = LocalWriter::default();
+        let mut w = FileWriter::default();
         let _ = content.value().write_to(&mut w);
         drop(content);
         let uri = params
@@ -417,7 +378,7 @@ impl LspFiles {
             .text_document
             .uri
             .clone();
-        let capture = find_hx_lsp(tree.0.root_node(), w.content, point, query)?;
+        let capture = find_hx_lsp(tree.root_node(), w.content, point, query)?;
         let start = Position {
             line: capture.start_position.row as u32,
             character: capture.start_position.column as u32,
@@ -443,20 +404,20 @@ impl LspFiles {
                 return false;
             }
             let ext = config.file_ext(Path::new(&uri));
-            ext.is_some_and(|lang_type| lang_type == LangType::Template)
+            ext.is_some_and(|lang_types| lang_types.is_lang(LangType::Template))
         });
         if !ext {
             return None;
         }
         let text = {
             let c = document_map.get(&uri)?;
-            let mut w = LocalWriter::default();
+            let mut w = FileWriter::default();
             let _ = c.value().write_to(&mut w);
             w
         };
         let index = self.get_index(&uri)?;
-        let tree = self.get_tree(index)?;
-        let root_node = tree.0.root_node();
+        let tree = self.get_tree(LangType::Template, index)?;
+        let root_node = tree.root_node();
         let pos = params.range.start;
         let trigger_point = Point::new(pos.line as usize, pos.character as usize);
         let position = query_position(
@@ -492,19 +453,78 @@ impl LspFiles {
         pos: Position,
         query: &HTMLQueries2,
     ) -> Option<PositionType> {
-        let tree = self.get_tree(index)?;
-        let root_node = tree.0.root_node();
+        let tree = self.get_tree(LangType::Template, index)?;
+        let root_node = tree.root_node();
         let trigger_point = Point::new(pos.line as usize, pos.character as usize);
 
         query_position(root_node, text, trigger_point, query_type, query)
     }
 
-    pub fn get_tree(&self, index: usize) -> Option<Ref<'_, usize, (Tree, LangType)>> {
-        self.trees.get(&index)
+    pub fn get_tree(&self, lang_type: LangType, index: usize) -> Option<Ref<'_, usize, Tree>> {
+        match lang_type {
+            LangType::Template => self.template.get(&index),
+            LangType::JavaScript => self.javascript.get(&index),
+            LangType::Backend => self.backend.get(&index),
+        }
     }
 
-    pub fn get_mut_tree(&self, index: usize) -> Option<RefMut<'_, usize, (Tree, LangType)>> {
-        self.trees.get_mut(&index)
+    pub fn get_mut_tree(
+        &self,
+        lang_type: LangType,
+        index: usize,
+    ) -> Option<RefMut<'_, usize, Tree>> {
+        match lang_type {
+            LangType::Template => self.template.get_mut(&index),
+            LangType::JavaScript => self.javascript.get_mut(&index),
+            LangType::Backend => self.backend.get_mut(&index),
+        }
+    }
+
+    pub fn add_tree(&self, index: usize, lang_type: LangType, text: &str, _range: Option<Range>) {
+        let _ = self
+            .parsers
+            .lock()
+            .ok()
+            .and_then(|mut parsers| -> Option<()> {
+                if let Some(old_tree) = self.get_mut_tree(lang_type, index) {
+                    if let Some(tree) = parsers.parse(lang_type, text, Some(&old_tree)) {
+                        drop(old_tree);
+                        self.insert_tree(lang_type, index, tree);
+                    }
+                } else {
+                    // tree doesn't exist, first insertion
+                    if let Some(tree) = parsers.parse(lang_type, text, None) {
+                        self.insert_tree(lang_type, index, tree);
+                    }
+                }
+                None
+            });
+    }
+
+    pub fn insert_tree(&self, lang_type: LangType, index: usize, tree: Tree) -> Option<Tree> {
+        match lang_type {
+            LangType::Template => self.template.insert(index, tree),
+            LangType::JavaScript => self.javascript.insert(index, tree),
+            LangType::Backend => self.backend.insert(index, tree),
+        }
+    }
+
+    pub fn input_edit2(
+        &self,
+        file: &String,
+        code: String,
+        input_edit: InputEdit,
+        lang_type: LangType,
+    ) -> Option<()> {
+        let file = self.get_index(file)?;
+        let mut old_tree = self.get_mut_tree(lang_type, file)?;
+        let _ = self.parsers.lock().ok().and_then(|mut parsers| {
+            old_tree.edit(&input_edit);
+            let tree = parsers.parse(lang_type, &code, Some(&old_tree))?;
+            drop(old_tree);
+            self.insert_tree(lang_type, file, tree)
+        });
+        None
     }
 }
 
@@ -568,24 +588,3 @@ impl Clone for Parsers {
         Self::default()
     }
 }
-
-// pub struct HTMLQueries {
-//     lsp: Query,
-//     name: Query,
-//     value: Query,
-// }
-
-// impl Default for HTMLQueries {
-//     fn default() -> Self {
-//         let lsp = Query::new(tree_sitter_html::language(), HX_HTML).unwrap();
-//         let name = Query::new(tree_sitter_html::language(), HX_NAME).unwrap();
-//         let value = Query::new(tree_sitter_html::language(), HX_VALUE).unwrap();
-//         Self { lsp, name, value }
-//     }
-// }
-
-// pub enum HTMLQuery {
-//     Lsp,
-//     Name,
-//     Value,
-// }

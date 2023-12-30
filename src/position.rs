@@ -67,7 +67,7 @@ pub fn get_position_from_lsp_completion(
         if let Some(index) = lsp_files.get_index(&uri) {
             lsp_files.query_position(index, &text, query_type, pos, query)
         } else if let Some(index) = lsp_files.add_file(String::from(&uri)) {
-            lsp_files.add_tree(index, Some(LangType::Template), &text, None);
+            lsp_files.add_tree(index, LangType::Template, &text, None);
             lsp_files.query_position(index, &text, query_type, pos, query)
         } else {
             None
@@ -174,10 +174,6 @@ pub fn hover_position(
             return Some(Position::AttributeName(attr_name.value.to_string()));
         }
         None
-        // Some(MyPosition::AttributeValue {
-        //     name: attr_name.value.to_string(),
-        //     value: attr_value.value.to_string(),
-        // })
     } else if let Some(capture) = props.get("with_attr_value_empty") {
         if client_point > capture.end_position {
             return None;
@@ -241,9 +237,6 @@ mod tests1 {
             QueryType::Completion,
             &query,
         );
-        // // Fixes issue with not suggesting hx-* attributes
-        // let expected = get_position(tree.root_node(), text, 0, 8);
-        // assert_eq!(matches, expected);
         assert_eq!(matches, Some(Position::AttributeName("hx-".to_string())));
     }
 
@@ -252,8 +245,6 @@ mod tests1 {
         let text = r##"<div hx-swap= ></div>"##;
 
         let tree = prepare_tree(text);
-
-        // let expected = get_position(tree.root_node(), text, 0, 13);
 
         let query = HTMLQueries::default();
         let matches = query_position(
@@ -264,7 +255,6 @@ mod tests1 {
             &query,
         );
 
-        // assert_eq!(matches, expected);
         assert_eq!(matches, None);
     }
 
@@ -283,9 +273,6 @@ mod tests1 {
             &query,
         );
 
-        // The new implementation doesn't return incomplete tags as value :)
-        // let expected = get_position(tree.root_node(), text, 0, 14);
-        // assert_eq!(matches, expected);
         assert_eq!(
             matches,
             Some(Position::AttributeValue {
@@ -299,7 +286,6 @@ mod tests1 {
     #[test]
     fn suggests_attr_values_when_open_and_closed_quotes() {
         let text = r#"<div hx-swap=""></div>"#;
-        // <div hx-swap=""></div>
 
         let tree = prepare_tree(text);
 
@@ -341,9 +327,6 @@ mod tests1 {
             &query,
         );
 
-        // The new implementation doesn't return incomplete tags as value :)
-        // let expected = get_position(tree.root_node(), text, 1, 16);
-        // assert_eq!(matches, expected);
         assert_eq!(
             matches,
             Some(Position::AttributeValue {
@@ -538,7 +521,6 @@ mod tests1 {
                 r#"<div hx-get="" class="p-4" hx-target="" ></div>"#,
                 Point::new(0, 9),
                 Some(Position::AttributeName(String::from("hx-get"))),
-                // None,
             ),
             (
                 r#"<div hx-get="/foo" hx-target="closest" hx-swap="outerHTML" hx-swap="swap"></div>"#,
@@ -578,7 +560,6 @@ mod tests1 {
             let query = HTMLQueries::default();
             let matches = query_position(tree.root_node(), text, case.1, case.2, &query);
             assert_eq!(matches, Some(Position::AttributeName(String::from("--"))));
-            // assert_eq!(matches, case.2);
         }
     }
 
@@ -601,81 +582,3 @@ def a():
         assert_eq!(props.len(), 3);
     }
 }
-
-// pub static QUICK_QUERY: &'static str = r#""#;
-
-pub static QUICK_QUERY: &str = r#"
-(
-  [
-
-    (_
-      (tag_name)
-      (_)*
-      (attribute
-          (attribute_name) @attr_name
-          (quoted_attribute_value
-          	(attribute_value) @attr_value
-            (_)*
-          ) @quoted_value
-
-      ) @with_attr_value_not_empty
-    )
-
-    (_
-
-      (tag_name)
-        (attribute
-          (attribute_name) @attr_name)
-		(ERROR)
-       @with_attr_name_with_equals_err
-    )
-
-    (_
-      (tag_name)
-      (attribute
-          (attribute_name) @attr_name
-          (quoted_attribute_value) @quoted_attr_value
-
-          (#eq? @quoted_attr_value "\"\"")
-
-      ) @with_attr_value_empty
-    )
-
-    (_
-      (ERROR
-      (tag_name)
-
-          (attribute_name) @attr_name
-          (attribute_value) @attr_value
-
-       @with_error_with_value_t_no_second_quote
-      )
-    )
-
-    (_
-
-      (tag_name)
-        (attribute
-          (attribute_name) @attr_name
-          )
-
-       @with_attr_name_without_value_t
-       (#eq? @attr_name @with_attr_name_without_value_t)
-
-    )
-
-    (_
-      (tag_name)
-      (attribute
-          (attribute_name) @attr_name
-          (attribute_value) @attr_value
-
-      ) @no_second_quote
-    )
-
-  ]
-
-	(#match? @attr_name "hx-.*")
-)
-
-"#;

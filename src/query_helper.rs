@@ -93,14 +93,6 @@ impl HTMLQueries {
         )
         .unwrap()
     }
-    // fn try_from(value: (&LangType, &Queries)) -> Result<Self, Self::Error> {
-    //         match value.0 {
-    //             LangType::Template => Err(()),
-    //             LangType::JavaScript => Ok(value.1.javascript),
-    //             LangType::Backend => Ok(value.1.backend),
-    //         }
-    //         todo!()
-    //     }
 }
 
 pub enum HTMLQuery {

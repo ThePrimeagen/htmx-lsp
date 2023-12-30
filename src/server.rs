@@ -30,7 +30,7 @@ use tower_lsp::lsp_types::{InitializeParams, ServerInfo};
 use tower_lsp::{lsp_types::InitializeResult, Client, LanguageServer};
 
 use crate::htmx_tree_sitter::LspFiles;
-use crate::init_hx::{init_hx_tags, init_hx_values, HxCompletion};
+use crate::init_hx::{init_hx_tags, init_hx_values, HxCompletion, LangType, LangTypes};
 use crate::position::{get_position_from_lsp_completion, Position, QueryType};
 
 pub struct BackendHtmx {
@@ -58,14 +58,10 @@ impl BackendHtmx {
         }
     }
 
-    fn on_change(&self, params: ServerTextDocumentItem) {
+    fn after_open(&self, params: ServerTextDocumentItem) {
         let rope = ropey::Rope::from_str(&params.text);
         self.document_map
             .insert(params.uri.to_string(), rope.clone());
-        self.lsp_files
-            .lock()
-            .ok()
-            .and_then(|lsp_files| lsp_files.on_change(params));
     }
 
     fn on_remove(&self, range: &Range, rope: &mut RefMut<'_, String, Rope>) -> Option<()> {
@@ -242,7 +238,7 @@ impl LanguageServer for BackendHtmx {
 
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
         let _temp_uri = params.text_document.uri.clone();
-        self.on_change(ServerTextDocumentItem {
+        self.after_open(ServerTextDocumentItem {
             uri: params.text_document.uri,
             text: params.text_document.text,
         });
@@ -271,6 +267,15 @@ impl LanguageServer for BackendHtmx {
     async fn did_change(&self, params: DidChangeTextDocumentParams) {
         let uri = &params.text_document.uri.to_string();
         let rope = self.document_map.get_mut(uri);
+        let lang_types = self
+            .htmx_config
+            .read()
+            .ok()
+            .and_then(|lang| lang.file_ext(Path::new(uri)));
+        if lang_types.is_none() {
+            return;
+        }
+        let lang_types = lang_types.unwrap();
         if let Some(mut rope) = rope {
             for change in params.content_changes {
                 if let Some(range) = &change.range {
@@ -280,22 +285,28 @@ impl LanguageServer for BackendHtmx {
                     } else {
                         self.on_insert(range, &change.text, &mut rope);
                     }
-                    let mut w = LocalWriter::default();
+                    let mut w = FileWriter::default();
                     let _ = rope.write_to(&mut w);
                     self.lsp_files
                         .lock()
                         .ok()
-                        .and_then(|lsp_files| lsp_files.input_edit(uri, w.content, input_edit));
+                        .and_then(|lsp_files| match lang_types {
+                            LangTypes::One(lang) => {
+                                lsp_files.input_edit2(uri, w.content, input_edit, lang)
+                            }
+                            LangTypes::Two { first, second } => {
+                                lsp_files.input_edit2(
+                                    uri,
+                                    w.content.to_string(),
+                                    input_edit,
+                                    first,
+                                );
+                                lsp_files.input_edit2(uri, w.content, input_edit, second)
+                            }
+                        });
                 }
             }
         }
-        // if let Some(text) = params.content_changes.first_mut() {
-        // self.on_change(ServerTextDocumentItem {
-        //     uri: params.text_document.uri,
-        //     text: std::mem::take(&mut text.text),
-        // })
-        // .await
-        // }
     }
 
     async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
@@ -311,7 +322,6 @@ impl LanguageServer for BackendHtmx {
                 })
             )
         };
-        // TODO disable for backend and javascript
         if !can_complete {
             let can_complete = self.can_complete.read().is_ok_and(|d| *d);
             if !can_complete {
@@ -460,16 +470,33 @@ impl LanguageServer for BackendHtmx {
 
     async fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
         let mut locations = None;
+        let mut lang_type = LangType::Template;
         if let Ok(config) = self.htmx_config.read() {
             if !config.is_valid {
                 return Ok(locations);
             }
+            let ext = config.file_ext(Path::new(
+                &params.text_document_position.text_document.uri.as_str(),
+            ));
+            match ext
+                .and_then(|lang| -> Option<()> {
+                    lang_type = lang.get();
+                    if lang_type == LangType::Template {
+                        None
+                    } else {
+                        Some(())
+                    }
+                })
+                .is_none()
+            {
+                true => return Ok(locations),
+                false => (),
+            }
         }
         locations = self.lsp_files.lock().ok().and_then(|lsp_files| {
-            self.queries
-                .lock()
-                .ok()
-                .and_then(|queries| lsp_files.references(params, &queries, &self.document_map))
+            self.queries.lock().ok().and_then(|queries| {
+                lsp_files.references(params, &queries, &self.document_map, lang_type)
+            })
         });
         Ok(locations)
     }
@@ -485,7 +512,14 @@ impl LanguageServer for BackendHtmx {
             }
             res = self.lsp_files.lock().ok().and_then(|lsp_files| {
                 self.queries.lock().ok().and_then(|queries| {
-                    lsp_files.goto_implementation(params, &queries, &self.document_map)
+                    let lang_types = config.file_ext(Path::new(
+                        params
+                            .text_document_position_params
+                            .text_document
+                            .uri
+                            .as_str(),
+                    ))?;
+                    lsp_files.goto_implementation(params, &queries, &self.document_map, lang_types)
                 })
             });
         }
@@ -512,7 +546,6 @@ impl LanguageServer for BackendHtmx {
     }
 
     async fn execute_command(&self, params: ExecuteCommandParams) -> Result<Option<Value>> {
-        let mut res = None;
         let command = params.command;
         if command == "reset_tags" {
             let diags = read_config(
@@ -523,10 +556,9 @@ impl LanguageServer for BackendHtmx {
             );
             if let Ok(diags) = diags {
                 self.publish_tag_diagnostics(diags, None).await;
-                res = Some(Value::String("Tags are reloaded".to_string()));
             }
         }
-        Ok(res)
+        Ok(None)
     }
 
     async fn shutdown(&self) -> Result<()> {
@@ -556,11 +588,11 @@ pub struct ServerTextDocumentItem {
 }
 
 #[derive(Default, Debug)]
-pub struct LocalWriter {
+pub struct FileWriter {
     pub content: String,
 }
 
-impl std::io::Write for LocalWriter {
+impl std::io::Write for FileWriter {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         if let Ok(b) = std::str::from_utf8(buf) {
             self.content.push_str(b);
