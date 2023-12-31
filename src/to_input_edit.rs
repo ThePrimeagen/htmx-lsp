@@ -5,8 +5,12 @@ use tree_sitter::{InputEdit, Point};
 use crate::htmx_tags::Tag;
 
 pub trait ToInputEdit {
+    /// Convert position to point range
     fn to_point(&self) -> (Point, Point);
+    /// Based on position in Rope return byte offset.
     fn to_byte(&self, rope: &Rope) -> (usize, usize);
+    /// With rope information, get InputEdit changes. This struct is responsible
+    /// for incremental updates to TreeSitter.
     fn to_input_edit(&self, rope: &Rope) -> InputEdit;
 }
 
@@ -41,6 +45,7 @@ impl ToInputEdit for Range {
     }
 }
 
+/// Convert Tag to Positon range for lsp_types.
 pub fn to_position(tag: &Tag) -> (Position, Position) {
     (
         Position::new(tag.start.row as u32, tag.start.column as u32),

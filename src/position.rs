@@ -14,6 +14,8 @@ use crate::{
     query_helper::{query_name, query_value, HTMLQueries, HTMLQuery},
 };
 
+/// Helpful enum when making TreeSitter queries.
+/// Goto implementation and code action request uses Definition enum.
 #[derive(PartialEq, Eq)]
 pub enum QueryType {
     Hover,
@@ -21,6 +23,7 @@ pub enum QueryType {
     Definition,
 }
 
+/// TreeSitter queries saves every capture as `CaptureDetails`.
 #[derive(Debug, Clone)]
 pub struct CaptureDetails {
     pub start_position: Point,
@@ -28,6 +31,11 @@ pub struct CaptureDetails {
     pub value: String,
 }
 
+/// After processing `CaptureDetails`, we can get precise results about
+/// client event in form of `AttributeName` or `AttributeValue`.
+/// This data is later used in all language server requests.
+/// Hover on attribute name doesn't capture other part of element, only attribute
+/// name without value.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Position {
     AttributeName(String),
@@ -40,17 +48,17 @@ pub enum Position {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PositionDefinition {
-    pub line: usize,
     pub point: Point,
     pub start: usize,
 }
 
 impl PositionDefinition {
-    pub fn new(line: usize, start: usize, point: Point) -> Self {
-        Self { line, point, start }
+    pub fn new(start: usize, point: Point) -> Self {
+        Self { point, start }
     }
 }
 
+/// Based on current position in document get `Position`.
 pub fn get_position_from_lsp_completion(
     text_params: &TextDocumentPositionParams,
     text: &DashMap<String, Rope>,
@@ -85,6 +93,7 @@ fn find_element_referent_to_current_node(node: Node<'_>) -> Option<Node<'_>> {
     return find_element_referent_to_current_node(node.parent()?);
 }
 
+/// Main function for querying HTML TreeSitter. It can be used for testing.
 pub fn query_position(
     root: Node<'_>,
     source: &str,
@@ -114,6 +123,7 @@ pub fn query_position(
     )
 }
 
+/// Debug capture details.
 #[allow(dead_code)]
 pub fn dbg_props(props: &HashMap<String, CaptureDetails>) {
     for i in props {
@@ -121,6 +131,7 @@ pub fn dbg_props(props: &HashMap<String, CaptureDetails>) {
     }
 }
 
+/// Function responsible for getting precise `Position` for completion in HTML TreeSitter query.
 pub fn completion_position(props: HashMap<String, CaptureDetails>) -> Option<Position> {
     let attr_name = props.get("attr_name")?;
 
@@ -151,6 +162,7 @@ pub fn completion_position(props: HashMap<String, CaptureDetails>) -> Option<Pos
     }
 }
 
+/// Checks if client_point is in attribute name or attribute_value range.
 pub fn hover_position(
     props: HashMap<String, CaptureDetails>,
     client_point: Point,

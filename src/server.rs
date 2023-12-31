@@ -33,23 +33,35 @@ use crate::htmx_tree_sitter::LspFiles;
 use crate::init_hx::{init_hx_tags, init_hx_values, HxCompletion, LangType, LangTypes};
 use crate::position::{get_position_from_lsp_completion, Position, QueryType};
 
+/// BackendHtmx - contains all important parts for htmx-lsp
 pub struct BackendHtmx {
     pub client: Client,
+    /// Every document is represented as Rope data structure. This lsp support only incremental changes.
     pub document_map: DashMap<String, Rope>,
-    pub hx_tags: Vec<HxCompletion>,
+    /// All htmx attributes used for completion and hover.
+    pub hx_attributes: Vec<HxCompletion>,
+    /// All htmx attribute values used for completion and hover.
     pub hx_attribute_values: HashMap<String, Vec<HxCompletion>>,
+    /// Some clients have no context information about completion request.
+    /// This can help server to suggest htmx values.  
+    /// Client completion starts after trigger character.
     pub can_complete: RwLock<bool>,
+    /// Configuration for htmx-lsp. Hover and completion can work without it.
     pub htmx_config: RwLock<HtmxConfig>,
+    /// Main field, responsible for all htmx actions.
+    /// Check `LspFiles` for more information.
     pub lsp_files: Arc<Mutex<LspFiles>>,
+    /// All tree sitter queries.
     pub queries: Arc<Mutex<Queries>>,
 }
 
 impl BackendHtmx {
+    /// Initialization of server. `BackendServer` fields are cloneable.
     pub fn new(client: Client) -> Self {
         Self {
             client,
             document_map: DashMap::new(),
-            hx_tags: init_hx_tags(),
+            hx_attributes: init_hx_tags(),
             hx_attribute_values: init_hx_values(),
             can_complete: RwLock::new(false),
             htmx_config: RwLock::new(HtmxConfig::default()),
@@ -58,18 +70,22 @@ impl BackendHtmx {
         }
     }
 
+    /// Used after didOpen request.
     fn after_open(&self, params: ServerTextDocumentItem) {
         let rope = ropey::Rope::from_str(&params.text);
         self.document_map
             .insert(params.uri.to_string(), rope.clone());
     }
 
+    /// Deleted some parts of document. Called when text content is empty.
+    /// Works also for mutli-cursor.
     fn on_remove(&self, range: &Range, rope: &mut RefMut<'_, String, Rope>) -> Option<()> {
         let (start, end) = range.to_byte(rope);
         rope.remove(start..end);
         None
     }
 
+    /// Inserted part of document.
     fn on_insert(
         &self,
         range: &Range,
@@ -81,6 +97,12 @@ impl BackendHtmx {
         None
     }
 
+    /// Client notification for `Tag` errors.
+    ///
+    /// Called after:
+    ///  * successful initialization
+    ///  * document save for backend/frontend(tags are saved)
+    ///  * code action  - `reset_tag`.
     async fn publish_tag_diagnostics(&self, diagnostics: Vec<Tag>, file: Option<String>) {
         let mut hm: HashMap<String, Vec<Diagnostic>> = HashMap::new();
         let len = diagnostics.len();
@@ -106,6 +128,7 @@ impl BackendHtmx {
         }
     }
 
+    /// Go to tag, backend/frontend. This only works when called from template part.
     fn check_definition(&self, position: Option<Position>) -> Option<GotoDefinitionResponse> {
         let mut def = None;
         let _ = position.is_some_and(|position| {
@@ -292,16 +315,34 @@ impl LanguageServer for BackendHtmx {
                         .ok()
                         .and_then(|lsp_files| match lang_types {
                             LangTypes::One(lang) => {
-                                lsp_files.input_edit2(uri, w.content, input_edit, lang)
+                                lsp_files.input_edit(uri, w.content, input_edit, lang)
                             }
                             LangTypes::Two { first, second } => {
-                                lsp_files.input_edit2(
-                                    uri,
-                                    w.content.to_string(),
-                                    input_edit,
-                                    first,
-                                );
-                                lsp_files.input_edit2(uri, w.content, input_edit, second)
+                                lsp_files.input_edit(uri, w.content.to_string(), input_edit, first);
+                                lsp_files.input_edit(uri, w.content, input_edit, second)
+                            }
+                        });
+                } else {
+                    let new_rope = Rope::from_str(&change.text);
+                    *rope = new_rope;
+
+                    let mut w = FileWriter::default();
+                    let _ = rope.write_to(&mut w);
+
+                    self.lsp_files
+                        .lock()
+                        .ok()
+                        .and_then(|lsp_files| match lang_types {
+                            LangTypes::One(lang) => lsp_files.add_tree(
+                                lsp_files.get_index(uri)?,
+                                lang,
+                                &w.content,
+                                None,
+                            ),
+                            LangTypes::Two { first, second } => {
+                                let index = lsp_files.get_index(uri)?;
+                                lsp_files.add_tree(index, first, &w.content, None);
+                                lsp_files.add_tree(index, second, &w.content, None)
                             }
                         });
                 }
@@ -356,7 +397,7 @@ impl LanguageServer for BackendHtmx {
             match result {
                 Position::AttributeName(name) => {
                     if name.starts_with("hx-") {
-                        let completions = self.hx_tags.clone();
+                        let completions = self.hx_attributes.clone();
                         let mut ret = Vec::with_capacity(completions.len());
                         for item in completions {
                             ret.push(CompletionItem {
@@ -409,7 +450,7 @@ impl LanguageServer for BackendHtmx {
             match result {
                 Position::AttributeName(name) => {
                     if let Some(res) = self
-                        .hx_tags
+                        .hx_attributes
                         .iter()
                         .find(|x| x.name == name.replace("hx-", ""))
                         .cloned()
@@ -566,6 +607,7 @@ impl LanguageServer for BackendHtmx {
     }
 }
 
+/// Returns available code actions for this language-server.
 pub fn code_actions() -> Vec<CodeActionOrCommand> {
     let mut commands = vec![];
     let command = ("Reset tags", "reset_tags");
@@ -582,11 +624,13 @@ pub fn code_actions() -> Vec<CodeActionOrCommand> {
     commands
 }
 
+/// Used in didOpen request.
 pub struct ServerTextDocumentItem {
     pub uri: Url,
     pub text: String,
 }
 
+/// Move content from Rope to this struct.
 #[derive(Default, Debug)]
 pub struct FileWriter {
     pub content: String,

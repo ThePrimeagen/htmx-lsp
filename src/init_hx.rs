@@ -20,6 +20,7 @@ fn to_hx_completion(values: Vec<(&str, &str)>) -> Vec<HxCompletion> {
     values.iter().filter_map(|x| x.try_into().ok()).collect()
 }
 
+/// Initialize hx attributes.
 pub fn init_hx_tags() -> Vec<HxCompletion> {
     let values = vec![
         ("boost", include_str!("./md/attributes/hx-boost.md")),
@@ -67,6 +68,7 @@ pub fn init_hx_tags() -> Vec<HxCompletion> {
     to_hx_completion(values)
 }
 
+/// Init htmx values for attributes.
 pub fn init_hx_values() -> HashMap<String, Vec<HxCompletion>> {
     let mut hm = HashMap::new();
 
@@ -205,11 +207,23 @@ pub fn init_hx_values() -> HashMap<String, Vec<HxCompletion>> {
     hm
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum ChannelMsg {
-    InitTreeSitter,
-}
-
+/// In every language server request, backend has to check for file extension
+/// that responds with this enum `LangType`.
+///
+/// Completion - Template
+///
+/// Hover - Template
+///
+/// Goto definition - Template
+///
+/// References - Backend/JavaScript
+///
+/// Save - Backend/JavaScript
+///
+/// Goto implementation - Template
+///
+/// Code actions - Template
+///
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum LangType {
     Template,
@@ -217,6 +231,9 @@ pub enum LangType {
     Backend,
 }
 
+/// In some cases, client can use two languages for same LangType.
+/// One example is *Leptos* in Rust, where template and backend have
+/// same file extension('rs').
 pub enum LangTypes {
     One(LangType),
     Two { first: LangType, second: LangType },
@@ -234,6 +251,7 @@ impl LangTypes {
         }
     }
 
+    /// Check if `lang_type` is in one of the languages.
     pub fn is_lang(&self, lang_type: LangType) -> bool {
         match self {
             LangTypes::One(lang) => lang == &lang_type,

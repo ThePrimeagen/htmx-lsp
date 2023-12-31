@@ -12,9 +12,14 @@ use crate::{
     },
 };
 
+/// Container for all queries. This struct can be cloned and used in other threads.
+/// It doesn't contain state about previous results of query.
 pub struct Queries {
+    /// Check `HTMLQueries` for more info.
     pub html: HTMLQueries,
+    /// JavaScript/TypeScript query. TreeSitter query for both languages is same.
     pub javascript: Query,
+    /// Backend tags query. Can be in Python, Rust, Go.
     pub backend: Query,
 }
 
@@ -35,6 +40,7 @@ impl Default for Queries {
 }
 
 impl Queries {
+    /// Get query.
     pub fn get(&self, query: HtmxQuery) -> &Query {
         match query {
             HtmxQuery::Html(html) => self.html.get(html),
@@ -43,6 +49,7 @@ impl Queries {
         }
     }
 
+    /// Default backend language is Rust. Change at the beginning to other.
     pub fn change_backend(&mut self, lang: &str) -> Option<()> {
         let lang = match lang {
             "python" => Some((tree_sitter_python::language(), HX_PYTHON_TAGS)),
@@ -56,6 +63,10 @@ impl Queries {
     }
 }
 
+/// HTMLQueries has three queries:
+/// * lsp `HX_HTML`
+/// * name `HX_NAME`
+/// * value `HX_VALUE`   
 pub struct HTMLQueries {
     lsp: Query,
     name: Query,
@@ -86,7 +97,8 @@ impl HTMLQueries {
         }
     }
 
-    pub fn get_by_tag_name(name: &str) -> Query {
+    /// Generate new query, for some random, non-htmx attribute.
+    pub fn get_by_attribute_name(name: &str) -> Query {
         Query::new(
             tree_sitter_html::language(),
             &HX_ANY_HTML.replace("NAME", name),
@@ -95,12 +107,14 @@ impl HTMLQueries {
     }
 }
 
+/// HTML can have multiple query types.
 pub enum HTMLQuery {
     Lsp,
     Name,
     Value,
 }
 
+/// HtmxQuery
 pub enum HtmxQuery {
     Html(HTMLQuery),
     JavaScript,
@@ -119,6 +133,7 @@ impl TryFrom<LangType> for HtmxQuery {
     }
 }
 
+/// Capture all query results. No duplicates, except when searching for hx_comment.
 pub fn query_props(
     node: Node<'_>,
     source: &str,
@@ -169,6 +184,7 @@ pub fn query_props(
         })
 }
 
+/// Query only attribute name. Can be used in testing.
 pub fn query_name(
     element: Node<'_>,
     source: &str,
@@ -199,6 +215,7 @@ pub fn query_name(
     Some(Position::AttributeName(attr_name.value.to_string()))
 }
 
+/// Query for attribute values. Can be used for testing.
 pub fn query_value(
     element: Node<'_>,
     source: &str,
@@ -248,11 +265,7 @@ pub fn query_value(
             });
             if query_type == &QueryType::Definition {
                 //
-                definition = Some(PositionDefinition::new(
-                    trigger_point.row,
-                    start,
-                    trigger_point,
-                ));
+                definition = Some(PositionDefinition::new(start, trigger_point));
             }
         }
     }
@@ -264,6 +277,7 @@ pub fn query_value(
     })
 }
 
+/// Query for htmx tags on backend/javascript.
 pub fn query_tag(
     element: Node<'_>,
     source: &str,
@@ -284,6 +298,7 @@ pub fn query_tag(
     tags
 }
 
+/// Capture all tags(if any is found) that matches `tag_name` parameter.
 #[allow(clippy::too_many_arguments)]
 pub fn query_htmx_lsp(
     element: Node<'_>,
@@ -318,6 +333,7 @@ pub fn query_htmx_lsp(
     }
 }
 
+/// `HX_HTML`
 pub fn find_hx_lsp(
     element: Node<'_>,
     source: String,

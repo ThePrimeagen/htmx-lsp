@@ -24,8 +24,7 @@ use crate::{
     position::{query_position, Position as PositionType, PositionDefinition, QueryType},
     queries::{HX_JS_TAGS, HX_RUST_TAGS},
     query_helper::{
-        find_hx_lsp, query_htmx_lsp, query_tag, HTMLQueries as HTMLQueries2, HTMLQuery, HtmxQuery,
-        Queries,
+        find_hx_lsp, query_htmx_lsp, query_tag, HTMLQueries, HTMLQuery, HtmxQuery, Queries,
     },
     server::{FileWriter, ServerTextDocumentItem},
     to_input_edit::to_position,
@@ -33,6 +32,18 @@ use crate::{
 
 type FileName = usize;
 
+/// LspFiles
+///
+/// This struct contains:
+///
+///   * TreeSitter and Parsers for
+///      * html
+///      * javascript
+///      * backend
+///   * file indexes(faster when comparing different tags because it's smaller than String)
+///   * backend/frontend tags
+///
+/// It handles all language server requests.
 #[derive(Clone)]
 pub struct LspFiles {
     current: RefCell<usize>,
@@ -59,6 +70,7 @@ impl Default for LspFiles {
 }
 
 impl LspFiles {
+    /// Reset indexes, trees and tags.
     pub fn reset(&self) {
         self.indexes.clear();
         self.template.clear();
@@ -67,6 +79,7 @@ impl LspFiles {
         self.tags.clear();
     }
 
+    /// After each save for backend/javascript, tags are deleted for that file.
     pub fn delete_tags_by_index(&self, index: usize) {
         let mut tags = vec![];
         for i in &self.tags {
@@ -80,6 +93,7 @@ impl LspFiles {
         }
     }
 
+    /// Errors if tag already exist.
     pub fn add_tag(&self, tag: Tag) -> Result<(), Tag> {
         if self.tags.contains_key(&tag.name) {
             Err(tag)
@@ -89,10 +103,12 @@ impl LspFiles {
         }
     }
 
+    /// Get reference to tag. Only used in definition request, deadlock can't happen here.
     pub fn get_tag<'a>(&'a self, key: &String) -> Option<Ref<'a, std::string::String, Tag>> {
         self.tags.get(key)
     }
 
+    /// Returns index for file. If file already exists, then old index is returned.
     pub fn add_file(&self, key: String) -> Option<usize> {
         match self.get_index(&key) {
             Some(index) => Some(index),
@@ -112,6 +128,7 @@ impl LspFiles {
         None
     }
 
+    /// Get file path for this index.
     pub fn get_uri(&self, index: usize) -> Option<String> {
         self.indexes.iter().find_map(|item| {
             if item.value() == &index {
@@ -128,6 +145,7 @@ impl LspFiles {
         None
     }
 
+    /// Notify client about possible tag name conflict.
     pub fn publish_tag_diagnostics(
         &self,
         diagnostics: Vec<Tag>,
@@ -155,12 +173,13 @@ impl LspFiles {
         }
     }
 
+    /// Returns Position from request, this works only if called from templates.
     pub fn goto_definition(
         &self,
         params: GotoDefinitionParams,
         config: &RwLock<HtmxConfig>,
         document_map: &DashMap<String, Rope>,
-        query: &HTMLQueries2,
+        query: &HTMLQueries,
     ) -> Option<PositionType> {
         let response = None;
         let file = params
@@ -202,6 +221,7 @@ impl LspFiles {
         response
     }
 
+    /// Prepare response for goto definition request.
     pub fn goto_definition_response(
         &self,
         definition: Option<PositionDefinition>,
@@ -220,6 +240,7 @@ impl LspFiles {
         None
     }
 
+    /// Search and insert every tag, collect errors.
     #[allow(clippy::result_unit_err)]
     pub fn add_tags_from_file(
         &self,
@@ -253,6 +274,7 @@ impl LspFiles {
         Ok(())
     }
 
+    /// Called after didSave request. Returns tag errors.
     pub fn saved(
         &self,
         uri: &String,
@@ -283,6 +305,7 @@ impl LspFiles {
         Some(diagnostics.to_vec())
     }
 
+    /// Can be called from backend/javascript file.
     pub fn references(
         &self,
         params: ReferenceParams,
@@ -345,6 +368,7 @@ impl LspFiles {
         locations
     }
 
+    /// Goto first hx-lsp attribute.
     pub fn goto_implementation(
         &self,
         params: GotoImplementationParams,
@@ -391,11 +415,12 @@ impl LspFiles {
         Some(GotoImplementationResponse::Scalar(Location { uri, range }))
     }
 
+    /// Called from template, hx-lsp attribute.
     pub fn code_action(
         &self,
         params: CodeActionParams,
         config: &RwLock<HtmxConfig>,
-        query: &HTMLQueries2,
+        query: &HTMLQueries,
         document_map: &DashMap<String, Rope>,
     ) -> Option<()> {
         let uri = String::from(&params.text_document.uri.to_string());
@@ -451,7 +476,7 @@ impl LspFiles {
         text: &str,
         query_type: QueryType,
         pos: Position,
-        query: &HTMLQueries2,
+        query: &HTMLQueries,
     ) -> Option<PositionType> {
         let tree = self.get_tree(LangType::Template, index)?;
         let root_node = tree.root_node();
@@ -480,9 +505,14 @@ impl LspFiles {
         }
     }
 
-    pub fn add_tree(&self, index: usize, lang_type: LangType, text: &str, _range: Option<Range>) {
-        let _ = self
-            .parsers
+    pub fn add_tree(
+        &self,
+        index: usize,
+        lang_type: LangType,
+        text: &str,
+        _range: Option<Range>,
+    ) -> Option<()> {
+        self.parsers
             .lock()
             .ok()
             .and_then(|mut parsers| -> Option<()> {
@@ -498,7 +528,7 @@ impl LspFiles {
                     }
                 }
                 None
-            });
+            })
     }
 
     pub fn insert_tree(&self, lang_type: LangType, index: usize, tree: Tree) -> Option<Tree> {
@@ -509,7 +539,8 @@ impl LspFiles {
         }
     }
 
-    pub fn input_edit2(
+    /// TreeSitter incremental parsing.
+    pub fn input_edit(
         &self,
         file: &String,
         code: String,
@@ -528,6 +559,7 @@ impl LspFiles {
     }
 }
 
+/// Parsers for HTML, JavaScript and backend language(Python, Rust, Go).
 pub struct Parsers {
     html: Parser,
     javascript: Parser,
@@ -535,6 +567,7 @@ pub struct Parsers {
 }
 
 impl Parsers {
+    /// Get new tree after parsing.
     pub fn parse(
         &mut self,
         lang_type: LangType,
@@ -548,6 +581,7 @@ impl Parsers {
         }
     }
 
+    /// Change backend based on `lang_type` and `language`. It's called once, at reading config.
     pub fn change_backend(&mut self, language: &str, lang_type: LangType) -> Option<()> {
         if lang_type != LangType::Backend {
             return None;

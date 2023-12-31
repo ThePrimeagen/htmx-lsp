@@ -15,27 +15,40 @@ use crate::{
     query_helper::Queries,
 };
 
+/// Help language server by providing additional info about your htmx project.
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct HtmxConfig {
+    /// Backend language for htmx project.
     pub lang: String,
+    /// Template language file extension. It can be only of one type(for example jinja).
     pub template_ext: String,
+    /// List of directories for templates, it must contain relative paths.
+    /// ```json
+    /// { "templates": ["./templates"] }
+    /// ````
+    /// Language server searches only for `template_ext` file extension.
     pub templates: Vec<String>,
+    /// List of directories for JavaScript/TypeScript, it must contain relative paths.
+    /// ```json
+    /// { "js_tags": ["./frontend/src/htmx_part"] }
+    /// ````
+    /// Language server searches for `js/ts` file extension.
     pub js_tags: Vec<String>,
+    /// List of directories for selected backend language, it must contain relative paths.
+    /// ```json
+    /// { "backend_tags": ["./src"] }
+    /// ````
+    /// Language server searches for proper backend file extension.
     pub backend_tags: Vec<String>,
     #[serde(skip)]
+    /// This field is not serializable/deserializable.
+    /// Every LSP request supported by HtmxBackend first checks if config is valid
+    /// (hover and completion works without checks).
     pub is_valid: bool,
 }
 
 impl HtmxConfig {
-    pub fn is_backend(&self, ext: &str) -> bool {
-        match self.lang.as_str() {
-            "rust" => ext == "rs",
-            "python" => ext == "py",
-            "go" => ext == "go",
-            _ => false,
-        }
-    }
-
+    /// Check if passed file extension is in client config.
     pub fn file_ext(&self, path: &Path) -> Option<LangTypes> {
         match path.extension()?.to_str() {
             Some(e) => match e {
@@ -56,12 +69,22 @@ impl HtmxConfig {
             None => None,
         }
     }
+    /// Checks if passed file extension is supported backend.
+    pub fn is_backend(&self, ext: &str) -> bool {
+        match self.lang.as_str() {
+            "rust" => ext == "rs",
+            "python" => ext == "py",
+            "go" => ext == "go",
+            _ => false,
+        }
+    }
 
     pub fn is_supported_backend(&self) -> bool {
         matches!(self.lang.as_str(), "python" | "rust" | "go")
     }
 }
 
+/// Quickly check config on initialization request.
 pub fn validate_config(config: Option<Value>) -> Option<HtmxConfig> {
     if let Some(config) = config {
         if let Ok(mut config) = serde_json::from_value::<HtmxConfig>(config) {
@@ -72,6 +95,8 @@ pub fn validate_config(config: Option<Value>) -> Option<HtmxConfig> {
     None
 }
 
+/// Read config. Language server can be used even if config
+/// haven't passed all checks
 pub fn read_config(
     config: &RwLock<HtmxConfig>,
     lsp_files: &Arc<Mutex<LspFiles>>,
@@ -93,6 +118,8 @@ pub fn read_config(
     }
 }
 
+/// Walk through all directories and files. In this process it catches all
+/// duplicated tag errors.
 fn walkdir(
     config: &HtmxConfig,
     lsp_files: &Arc<Mutex<LspFiles>>,
@@ -152,6 +179,7 @@ fn walkdir(
     Ok(diagnostics)
 }
 
+/// Get path, read contents of file, parse TreeSitter tree and check for tags.
 fn add_file(
     path: &&Path,
     lsp_files: &MutexGuard<LspFiles>,

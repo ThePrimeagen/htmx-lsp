@@ -1,3 +1,10 @@
+/// Search for htmx attributes, annotated by @attr_name
+/// `@attr_name` must start with `hx-`.
+///
+/// `@complete_match` is @attr_name
+///
+/// `@unfinished_tag` contains error in query but it can still recommend
+/// htmx attribute.
 pub static HX_NAME: &str = r#"
 (
         [
@@ -25,6 +32,20 @@ pub static HX_NAME: &str = r#"
     
 "#;
 
+/// Searches for position in completion.
+///
+/// `@attr_name` - attribute name.
+///
+/// `@attr_value` - attribute value.
+///
+/// `@open_quote_error` - started typing but second quote is missing.
+///
+/// `@error_char` - means missing '=' or badly positioned '='.
+///
+/// `@empty_attribute` - attribute value is empty, completion can start inside.
+///
+/// `@non_empty_attribute` - attribute value isn't empty, usually used for hover,
+/// goto implementation and goto definition request.
 pub static HX_VALUE: &str = r#"
 (
         [
@@ -71,6 +92,8 @@ pub static HX_VALUE: &str = r#"
         (#match? @attr_name "hx-.*")
 )"#;
 
+/// Rust comments should be inside of function or closure.
+/// `@hx_comment` - comment. Tag starts after '@'.
 pub static HX_RUST_TAGS: &str = r#"
 (
   [
@@ -96,6 +119,9 @@ pub static HX_RUST_TAGS: &str = r#"
 	(#match? @hx_comment " hx@.*")
 )
 "#;
+
+/// JavaScript/TypeScript comments are inside any type of function.
+/// `@hx_comment` - comment. Tag starts after '@'.
 pub static HX_JS_TAGS: &str = r#"
 (
 	[
@@ -121,6 +147,8 @@ pub static HX_JS_TAGS: &str = r#"
     (#match? @hx_comment " hx@")
 )
 "#;
+
+/// Find hx-lsp attribute. Used for goto implementation.
 pub static HX_HTML: &str = r#"
 (
 	(attribute
@@ -134,6 +162,7 @@ pub static HX_HTML: &str = r#"
 )
 "#;
 
+/// Replace "NAME" with any html attribute. At the moment not used query.
 pub static HX_ANY_HTML: &str = r#"
 (
 	(attribute
@@ -147,12 +176,18 @@ pub static HX_ANY_HTML: &str = r#"
 )
 "#;
 
+/// Python comments work much more different than in other languages.
+/// They can be everywhere. Because of identation it has no information about
+/// scope.
+/// `@hx_comment` - comment. Tag starts after '@'.
 pub static HX_PYTHON_TAGS: &str = r#"
 (
 	(comment) @hx_comment
 )
 "#;
 
+/// Go comments are inside of function.
+/// `@hx_comment` - comment. Tag starts after '@'.
 pub static HX_GO_TAGS: &str = r#"
 
 (
