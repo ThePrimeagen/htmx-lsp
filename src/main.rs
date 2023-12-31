@@ -1,37 +1,10 @@
-mod opts;
-
-use std::{fs::File, io::stderr};
-
-use anyhow::Result;
-use clap::Parser;
-use log::trace;
-use structured_logger::{json::new_writer, Builder};
-
-use opts::JSPerfLspConfig;
-
-use htmx_lsp_server::start_lsp;
-
-fn main() -> Result<()> {
-    let config = JSPerfLspConfig::parse();
-
-    let mut builder = Builder::with_level(&config.level);
-
-    if let Some(file) = &config.file {
-        let log_file = File::options()
-            .create(true)
-            .append(true)
-            .open(file)
-            .unwrap();
-
-        builder = builder.with_target_writer("*", new_writer(log_file));
-    } else {
-        builder = builder.with_target_writer("*", new_writer(stderr()))
-    }
-
-    builder.init();
-    trace!("log options: {:?}", config);
-
-    start_lsp()?;
-
-    Ok(())
+use htmx_lsp::server::BackendHtmx;
+use tower_lsp::{LspService, Server};
+#[tokio::main]
+async fn main() {
+    env_logger::init();
+    let stdin = tokio::io::stdin();
+    let stdout = tokio::io::stdout();
+    let (service, socket) = LspService::build(BackendHtmx::new).finish();
+    Server::new(stdin, stdout, socket).serve(service).await;
 }
