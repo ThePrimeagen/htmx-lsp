@@ -106,7 +106,7 @@ pub fn get_position_from_lsp_completion(
     text_params: TextDocumentPositionParams,
 ) -> Option<Position> {
     error!("get_position_from_lsp_completion");
-    let text = get_text_document(text_params.text_document.uri)?;
+    let text = get_text_document(&text_params.text_document.uri)?;
     error!("get_position_from_lsp_completion: text {}", text);
     let pos = text_params.position;
     error!("get_position_from_lsp_completion: pos {:?}", pos);

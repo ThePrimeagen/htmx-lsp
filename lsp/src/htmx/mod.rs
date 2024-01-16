@@ -2,7 +2,7 @@ use log::debug;
 use lsp_types::TextDocumentPositionParams;
 use serde::{Deserialize, Serialize};
 
-use crate::tree_sitter::Position;
+use crate::{text_store::get_word_from_pos_params, tree_sitter::Position};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HxCompletion {
@@ -39,12 +39,18 @@ pub fn hx_completion(text_params: TextDocumentPositionParams) -> Option<&'static
 }
 
 pub fn hx_hover(text_params: TextDocumentPositionParams) -> Option<HxCompletion> {
-    let result = crate::tree_sitter::get_position_from_lsp_completion(text_params.clone())?;
+    let result = match get_word_from_pos_params(&text_params) {
+        Ok(word) => Position::AttributeName(word),
+        Err(_) => {
+            return None;
+        }
+    };
     debug!("handle_hover result: {:?}", result);
 
     match result {
-        Position::AttributeName(name) => HX_TAGS.iter().find(|x| x.name == name).cloned(),
-        Position::AttributeValue { name, .. } => HX_TAGS.iter().find(|x| x.name == name).cloned(),
+        Position::AttributeName(name) | Position::AttributeValue { name, .. } => {
+            HX_TAGS.iter().find(|x| x.name == name).cloned()
+        }
     }
 }
 
