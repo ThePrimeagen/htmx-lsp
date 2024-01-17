@@ -1,9 +1,11 @@
-use crate::tree_sitter_querier::{
-    query_attr_keys_for_completion, query_attr_values_for_completion,
+use crate::{
+    text_store::DOCUMENT_STORE,
+    tree_sitter_querier::{query_attr_keys_for_completion, query_attr_values_for_completion},
 };
 use log::{debug, error};
-use lsp_types::TextDocumentPositionParams;
-use tree_sitter::{Node, Parser, Point};
+use lsp_textdocument::FullTextDocument;
+use lsp_types::{TextDocumentContentChangeEvent, TextDocumentPositionParams};
+use tree_sitter::{InputEdit, Node, Point};
 
 use crate::text_store::get_text_document;
 
@@ -106,23 +108,61 @@ pub fn get_position_from_lsp_completion(
     text_params: TextDocumentPositionParams,
 ) -> Option<Position> {
     error!("get_position_from_lsp_completion");
-    let text = get_text_document(&text_params.text_document.uri)?;
+    let text = get_text_document(&text_params.text_document.uri, None)?;
     error!("get_position_from_lsp_completion: text {}", text);
     let pos = text_params.position;
     error!("get_position_from_lsp_completion: pos {:?}", pos);
 
-    // TODO: Gallons of perf work can be done starting here
-    let mut parser = Parser::new();
+    if let Some(entry) = DOCUMENT_STORE
+        .get()
+        .expect("text store not initialized")
+        .lock()
+        .expect("text store mutex poisoned")
+        .get_mut(text_params.text_document.uri.as_str())
+    {
+        entry.tree = entry
+            .parser
+            .parse(entry.doc.get_content(None), entry.tree.as_ref());
 
-    parser
-        .set_language(tree_sitter_html::language())
-        .expect("could not load html grammer");
+        if let Some(ref curr_tree) = entry.tree {
+            let trigger_point = Point::new(pos.line as usize, pos.character as usize);
+            return query_position(curr_tree.root_node(), text.as_str(), trigger_point);
+        }
+    }
 
-    let tree = parser.parse(&text, None)?;
-    let root_node = tree.root_node();
-    let trigger_point = Point::new(pos.line as usize, pos.character as usize);
+    None
+}
 
-    return query_position(root_node, text.as_str(), trigger_point);
+/// Convert an `lsp_types::TextDocumentContentChangeEvent` to a `tree_sitter::InputEdit`
+pub fn text_doc_change_to_ts_edit(
+    change: &TextDocumentContentChangeEvent,
+    doc: &FullTextDocument,
+) -> Result<InputEdit, &'static str> {
+    let range = change.range.ok_or("Invalid edit range")?;
+    let start = range.start;
+    let end = range.end;
+
+    let start_byte = doc.offset_at(start) as usize;
+    let new_end_byte = start_byte + change.text.len();
+    let new_end_pos = doc.position_at(new_end_byte as u32);
+
+    Ok(InputEdit {
+        start_byte,
+        old_end_byte: doc.offset_at(end) as usize,
+        new_end_byte,
+        start_position: Point {
+            row: start.line as usize,
+            column: start.character as usize,
+        },
+        old_end_position: Point {
+            row: end.line as usize,
+            column: end.character as usize,
+        },
+        new_end_position: Point {
+            row: new_end_pos.line as usize,
+            column: new_end_pos.character as usize,
+        },
+    })
 }
 
 #[cfg(test)]

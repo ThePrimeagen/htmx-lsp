@@ -9,8 +9,8 @@ use htmx::HxCompletion;
 use log::{debug, error, info, warn};
 use lsp_types::{
     CompletionItem, CompletionItemKind, CompletionList, HoverContents, InitializeParams,
-    MarkupContent, ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind,
-    WorkDoneProgressOptions,
+    LanguageString, MarkedString, MarkupContent, PositionEncodingKind, ServerCapabilities,
+    TextDocumentSyncCapability, TextDocumentSyncKind, WorkDoneProgressOptions,
 };
 
 use lsp_server::{Connection, Message, Response};
@@ -123,7 +123,10 @@ pub fn start_lsp() -> Result<()> {
 
     // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
     let server_capabilities = serde_json::to_value(ServerCapabilities {
-        text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
+        position_encoding: Some(PositionEncodingKind::UTF16), // compatability with lsp_textdocument crate
+        text_document_sync: Some(TextDocumentSyncCapability::Kind(
+            TextDocumentSyncKind::INCREMENTAL,
+        )),
         completion_provider: Some(lsp_types::CompletionOptions {
             resolve_provider: Some(false),
             trigger_characters: Some(vec!["-".to_string(), "\"".to_string(), " ".to_string()]),
