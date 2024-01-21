@@ -1,8 +1,8 @@
 use clap::Parser;
 
 #[derive(Parser, Debug)]
-#[clap(name = "waxwing-lsp")]
-pub struct JSPerfLspConfig {
+#[clap()]
+pub struct HtmxLspConfig {
     /// The file to pipe logs out to
     #[clap(short, long)]
     pub file: Option<String>,

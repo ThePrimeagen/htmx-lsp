@@ -7,12 +7,12 @@ use clap::Parser;
 use log::trace;
 use structured_logger::{json::new_writer, Builder};
 
-use opts::JSPerfLspConfig;
+use opts::HtmxLspConfig;
 
 use htmx_lsp_server::start_lsp;
 
 fn main() -> Result<()> {
-    let config = JSPerfLspConfig::parse();
+    let config = HtmxLspConfig::parse();
 
     let mut builder = Builder::with_level(&config.level);
 
