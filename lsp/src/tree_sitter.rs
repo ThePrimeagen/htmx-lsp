@@ -7,8 +7,6 @@ use lsp_textdocument::FullTextDocument;
 use lsp_types::{TextDocumentContentChangeEvent, TextDocumentPositionParams};
 use tree_sitter::{InputEdit, Node, Point};
 
-use crate::text_store::get_text_document;
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum Position {
     AttributeName(String),
@@ -108,8 +106,6 @@ pub fn get_position_from_lsp_completion(
     text_params: TextDocumentPositionParams,
 ) -> Option<Position> {
     error!("get_position_from_lsp_completion");
-    let text = get_text_document(&text_params.text_document.uri, None)?;
-    error!("get_position_from_lsp_completion: text {}", text);
     let pos = text_params.position;
     error!("get_position_from_lsp_completion: pos {:?}", pos);
 
@@ -120,13 +116,12 @@ pub fn get_position_from_lsp_completion(
         .expect("text store mutex poisoned")
         .get_mut(text_params.text_document.uri.as_str())
     {
-        entry.tree = entry
-            .parser
-            .parse(entry.doc.get_content(None), entry.tree.as_ref());
+        let text = entry.doc.get_content(None);
+        entry.tree = entry.parser.parse(text, entry.tree.as_ref());
 
         if let Some(ref curr_tree) = entry.tree {
             let trigger_point = Point::new(pos.line as usize, pos.character as usize);
-            return query_position(curr_tree.root_node(), text.as_str(), trigger_point);
+            return query_position(curr_tree.root_node(), text, trigger_point);
         }
     }
 

@@ -8,8 +8,6 @@ use lsp_textdocument::FullTextDocument;
 use lsp_types::{Position, Range, TextDocumentPositionParams, Url};
 use tree_sitter::{Parser, Tree};
 
-// use crate::tree_sitter::Position;
-
 pub struct DocInfo {
     pub doc: FullTextDocument,
     pub parser: Parser,
@@ -78,7 +76,7 @@ fn find_word_at_pos(line: &str, col: usize) -> (usize, usize) {
 
 pub fn get_word_from_pos_params(pos_params: &TextDocumentPositionParams) -> anyhow::Result<String> {
     let uri = &pos_params.text_document.uri;
-    let line = pos_params.position.line as usize;
+    let line = pos_params.position.line;
     let col = pos_params.position.character as usize;
 
     let range = Range {
