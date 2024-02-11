@@ -9,8 +9,8 @@ use htmx::HxCompletion;
 use log::{debug, error, info, warn};
 use lsp_types::{
     CompletionItem, CompletionItemKind, CompletionList, HoverContents, InitializeParams,
-    LanguageString, MarkedString, ServerCapabilities, TextDocumentSyncCapability,
-    TextDocumentSyncKind, WorkDoneProgressOptions,
+    MarkupContent, ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind,
+    WorkDoneProgressOptions,
 };
 
 use lsp_server::{Connection, Message, Response};
@@ -80,10 +80,10 @@ fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
             Some(HtmxResult::AttributeHover(hover_resp)) => {
                 debug!("main_loop - hover response: {:?}", hover_resp);
                 let hover_response = lsp_types::Hover {
-                    contents: HoverContents::Scalar(MarkedString::LanguageString(LanguageString {
-                        language: "html".to_string(),
-                        value: hover_resp.value.clone(),
-                    })),
+                    contents: HoverContents::Markup(MarkupContent {
+                        kind: lsp_types::MarkupKind::Markdown,
+                        value: hover_resp.value.to_string(),
+                    }),
                     range: None,
                 };
 

@@ -4,7 +4,7 @@ use crate::{
 };
 use log::{debug, error, warn};
 use lsp_server::{Message, Notification, Request, RequestId};
-use lsp_types::{CompletionContext, CompletionParams, CompletionTriggerKind};
+use lsp_types::{CompletionContext, CompletionParams, CompletionTriggerKind, HoverParams};
 
 #[derive(serde::Deserialize, Debug)]
 struct Text {
@@ -141,12 +141,12 @@ fn handle_completion(req: Request) -> Option<HtmxResult> {
 }
 
 fn handle_hover(req: Request) -> Option<HtmxResult> {
-    let completion: CompletionParams = serde_json::from_value(req.params).ok()?;
-    debug!("handle_hover: {:?}", completion.context);
+    let hover: HoverParams = serde_json::from_value(req.params).ok()?;
+    debug!("handle_hover: {:?}", hover);
 
-    let text_params = completion.text_document_position;
+    let text_params = hover.text_document_position_params;
 
-    debug!("handle_hover text_params: {:?}", text_params);
+    debug!("handle_hover text_position_params: {:?}", text_params);
 
     let attribute = hx_hover(text_params)?;
 
