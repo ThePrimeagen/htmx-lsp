@@ -132,8 +132,22 @@ fn handle_completion(req: Request) -> Option<HtmxResult> {
             ..
         }) => {
             let items = match hx_completion(completion.text_document_position) {
-                Some(items) => items,
-                None => {
+                (Some(items), Some(ext_items)) => {
+                    let mut temp = items.to_vec();
+                    for ext_item in ext_items {
+                        temp.append(&mut ext_item.to_vec());
+                    }
+                    temp
+                }
+                (Some(items), None) => items.to_vec(),
+                (None, Some(ext_items)) => {
+                    let mut temp = Vec::new();
+                    for ext_item in ext_items {
+                        temp.append(&mut ext_item.to_vec());
+                    }
+                    temp
+                }
+                (None, None) => {
                     error!("EMPTY RESULTS OF COMPLETION");
                     return None;
                 }
@@ -145,7 +159,7 @@ fn handle_completion(req: Request) -> Option<HtmxResult> {
             );
 
             Some(HtmxResult::AttributeCompletion(HtmxAttributeCompletion {
-                items: items.to_vec(),
+                items,
                 id: req.id,
             }))
         }
