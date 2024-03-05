@@ -332,6 +332,16 @@ mod tests {
     }
 
     #[test]
+    fn test_it_suggest_extension_in_same_element() {
+        let text = r##"<div hx-ext="sse" sse- ></div>"##;
+        let tree = prepare_tree(text);
+
+        let matches = query_position(tree.root_node(), text, Point::new(0, 22));
+
+        assert_eq!(matches, Some(Position::AttributeName("sse-".to_string())));
+    }
+
+    #[test]
     fn test_it_does_not_suggest_when_extension_not_active() {
         let text = r##"<div ws- ></div>"##;
         let tree = prepare_tree(text);
