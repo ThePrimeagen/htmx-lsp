@@ -48,6 +48,7 @@ pub fn hx_completion(
             for ext in exts.iter() {
                 // add matching refs to extension completes to Vec
                 // once extension completes have been added
+                comps.push(HX_EXTENSIONS[ext]);
             }
             Some(comps)
         }
@@ -77,6 +78,89 @@ pub fn hx_hover(text_params: TextDocumentPositionParams) -> Option<HxCompletion>
         }
     }
 }
+
+pub static HX_EXTENSIONS: phf::Map<&'static str, &'static [HxCompletion]> = phf::phf_map! {
+    "ajax-header" => build_completion![
+
+    ] as &[_],
+    "alpine-morph" => build_completion![
+
+    ] as &[_],
+    "class-tools" => build_completion![
+        ("classes", "./hx-ext/class-tools/classes.md")
+    ] as &[_],
+    "client-side-templates" => build_completion![
+        ("handlebars-template", "./hx-ext/client-side-templates/handlebars-template.md"),
+        ("mustache-template", "./hx-ext/client-side-templates/mustache-template.md"),
+        ("nunjucks-template", "./hx-ext/client-side-templates/nunjucks-template.md"),
+        ("xslt-template", "./hx-ext/client-side-templates/xslt-template.md")
+    ] as &[_],
+    "debug" => build_completion![
+
+    ] as &[_],
+    "event-header" => build_completion![
+
+    ] as &[_],
+    "head-support" => build_completion![
+        ("hx-head", "./hx-ext/head-support/hx-head.md")
+    ] as &[_],
+    "include-vals" => build_completion![
+        ("include-vals", "./hx-ext/include-vals/include-vals.md")
+    ] as &[_],
+    "json-enc" => build_completion![
+
+    ] as &[_],
+    "idiomorph" => build_completion![
+
+    ] as &[_],
+    "loading-states" => build_completion![
+        ("data-loading", "./hx-ext/loading-states/data-loading.md"),
+        ("data-loading-target", "./hx-ext/loading-states/data-loading-target.md"),
+        ("data-loading-states", "./hx-ext/loading-states/data-loading-states.md"),
+        ("data-loading-path", "./hx-ext/loading-states/data-loading-path.md"),
+        ("data-loading-disable", "./hx-ext/loading-states/data-loading-disable.md"),
+        ("data-loading-delay", "./hx-ext/loading-states/data-loading-delay.md"),
+        ("data-loading-class", "./hx-ext/loading-states/data-loading-class.md"),
+        ("data-loading-class-remove", "./hx-ext/loading-states/data-loading-class-remove.md"),
+        ("data-loading-aria-busy", "./hx-ext/loading-states/data-loading-aria-busy.md")
+    ] as &[_],
+    "method-override" => build_completion![
+
+    ] as &[_],
+    "morphdom-swap" => build_completion![
+
+    ] as &[_],
+    "multi-swap" => build_completion![
+
+    ] as &[_],
+    "path-deps" => build_completion![
+        ("path-deps", "./hx-ext/path-deps/path-deps.md")
+    ] as &[_],
+    "preload" => build_completion![
+        ("preload", "./hx-ext/preload/preload.md"),
+        ("preload-images", "./hx-ext/preload/preload-images.md")
+    ] as &[_],
+    "remove-me" => build_completion![
+        ("remove-me", "./hx-ext/remove-me/remove-me.md")
+    ] as &[_],
+    "response-targets" => build_completion![
+        ("hx-target-error", "./hx-ext/response-targets/hx-target-error.md")
+    ] as &[_],
+    "restored" => build_completion![
+
+    ] as &[_],
+    "ws" => build_completion![
+        ("ws-connect", "./hx-ext/ws/ws-connect.md"),
+        ("ws-send", "./hx-ext/ws/ws-send.md")
+    ] as &[_],
+    "sse" => build_completion![
+        ("sse-connect", "./hx-ext/sse/sse-connect.md"),
+        ("sse-swap", "./hx-ext/sse/sse-swap.md")
+    ] as &[_],
+    "path-params" => build_completion![
+
+    ] as &[_],
+};
 
 pub static HX_TAGS: &[HxCompletion] = build_completion!(
     ("hx-boost", "./attributes/hx-boost.md"),
