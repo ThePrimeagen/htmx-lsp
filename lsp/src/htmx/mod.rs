@@ -81,7 +81,8 @@ pub fn hx_hover(text_params: TextDocumentPositionParams) -> Option<HxCompletion>
 
 pub static HX_EXTENSIONS: phf::Map<&'static str, &'static [HxCompletion]> = phf::phf_map! {
     "class-tools" => build_completion![
-        ("classes", "./attributes/class-tools/classes.md")
+        ("classes", "./attributes/class-tools/classes.md"),
+        ("data-classes", "./attributes/class-tools/data-classes.md")
     ] as &[_],
     "client-side-templates" => build_completion![
         ("handlebars-template", "./attributes/client-side-templates/handlebars-template.md"),
