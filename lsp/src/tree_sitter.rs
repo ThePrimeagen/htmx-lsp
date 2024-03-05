@@ -1,11 +1,14 @@
-use crate::tree_sitter_querier::{
-    query_attr_keys_for_completion, query_attr_values_for_completion,
+use std::collections::HashSet;
+
+use crate::{
+    text_store::DOCUMENT_STORE,
+    tree_sitter_querier::{query_attr_keys_for_completion, query_attr_values_for_completion},
 };
 use log::{debug, error};
-use lsp_types::TextDocumentPositionParams;
-use tree_sitter::{Node, Parser, Point};
-
-use crate::text_store::get_text_document;
+use lsp_textdocument::FullTextDocument;
+use lsp_types::{TextDocumentContentChangeEvent, TextDocumentPositionParams};
+use once_cell::sync::Lazy;
+use tree_sitter::{InputEdit, Node, Point, Query, QueryCursor};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Position {
@@ -102,27 +105,158 @@ fn get_position(root: Node<'_>, source: &str, row: usize, column: usize) -> Opti
     create_attribute(desc, source)
 }
 
+macro_rules! cursor_matches {
+    ($cursor_line:expr,$cursor_char:expr,$query_start:expr,$query_end:expr) => {{
+        $query_start.row == $cursor_line
+            && $query_end.row == $cursor_line
+            && $query_start.column <= $cursor_char
+            && $query_end.column >= $cursor_char
+    }};
+}
+
+/// Returns an Option<Vec<String>> of extension tags the provided position is inside of
+// Currently limited by tree-sitter's max depth of 12 levels, see https://github.com/tree-sitter/tree-sitter/issues/880
+pub fn get_extension_completes(text_params: TextDocumentPositionParams) -> Option<Vec<String>> {
+    static QUERY_HTMX_EXT: Lazy<Query> = Lazy::new(|| {
+        tree_sitter::Query::new(
+            tree_sitter_html::language(),
+            r#"(
+	(element
+        (start_tag
+            (attribute
+                (attribute_name) @hxext
+                (quoted_attribute_value
+                    (attribute_value) @extension
+                )
+            ) 
+            (attribute (attribute_name) @tag )?
+        )
+        (element
+            [
+            	(_ (attribute (attribute_name) @tag ))
+                (_ (_ (attribute (attribute_name) @tag )))
+                (_ (_ (_ (attribute (attribute_name) @tag ))))
+                (_ (_ (_ (_ (attribute (attribute_name) @tag )))))
+                (_ (_ (_ (_ (_ (attribute (attribute_name) @tag ))))))
+                (_ (_ (_ (_ (_ (_ (attribute (attribute_name) @tag )))))))
+                (_ (_ (_ (_ (_ (_ (_ (attribute (attribute_name) @tag ))))))))
+                (_ (_ (_ (_ (_ (_ (_ (_ (attribute (attribute_name) @tag )))))))))
+                (_ (_ (_ (_ (_ (_ (_ (_ (_ (attribute (attribute_name) @tag ))))))))))
+                (_ (_ (_ (_ (_ (_ (_ (_ (_ (_ (attribute (attribute_name) @tag )))))))))))
+                (_ (_ (_ (_ (_ (_ (_ (_ (_ (_ (_ (attribute (attribute_name) @tag ))))))))))))
+                (_ (_ (_ (_ (_ (_ (_ (_ (_ (_ (_ (_ (attribute (attribute_name) @tag )))))))))))))
+            ]
+        )
+    )
+(#match? @hxext "hx-ext")
+)
+"#,
+        )
+        .unwrap()
+    });
+
+    let mut ext_tags: HashSet<String> = HashSet::new();
+    let mut cursor = QueryCursor::new();
+    let cursor_line = text_params.position.line as usize;
+    let cursor_char = text_params.position.character as usize;
+
+    if let Some(entry) = DOCUMENT_STORE
+        .get()
+        .expect("text store not initialized")
+        .lock()
+        .expect("text store mutex poisoned")
+        .get_mut(text_params.text_document.uri.as_str())
+    {
+        entry.tree = entry
+            .parser
+            .parse(entry.doc.get_content(None), entry.tree.as_ref());
+
+        if let Some(ref curr_tree) = entry.tree {
+            let text = entry.doc.get_content(None).as_bytes();
+            let matches = cursor.matches(&QUERY_HTMX_EXT, curr_tree.root_node(), text);
+
+            for match_ in matches.into_iter() {
+                let caps = match_.captures;
+                if caps.len() < 3 {
+                    continue;
+                }
+
+                let ext_tag = caps[2].node;
+                let cap_start = ext_tag.range().start_point;
+                let cap_end = ext_tag.range().end_point;
+                if cursor_matches!(cursor_line, cursor_char, cap_start, cap_end) {
+                    if let Ok(ext) = caps[1].node.utf8_text(text) {
+                        debug!("get_extension_completes: Adding completes for {}", ext);
+                        ext_tags.insert(ext.replace('"', ""));
+                    }
+                }
+            }
+        }
+    }
+
+    if ext_tags.is_empty() {
+        None
+    } else {
+        Some(ext_tags.into_iter().collect())
+    }
+}
+
 pub fn get_position_from_lsp_completion(
     text_params: TextDocumentPositionParams,
 ) -> Option<Position> {
     error!("get_position_from_lsp_completion");
-    let text = get_text_document(&text_params.text_document.uri)?;
-    error!("get_position_from_lsp_completion: text {}", text);
     let pos = text_params.position;
     error!("get_position_from_lsp_completion: pos {:?}", pos);
 
-    // TODO: Gallons of perf work can be done starting here
-    let mut parser = Parser::new();
+    if let Some(entry) = DOCUMENT_STORE
+        .get()
+        .expect("text store not initialized")
+        .lock()
+        .expect("text store mutex poisoned")
+        .get_mut(text_params.text_document.uri.as_str())
+    {
+        let text = entry.doc.get_content(None);
+        entry.tree = entry.parser.parse(text, entry.tree.as_ref());
 
-    parser
-        .set_language(tree_sitter_html::language())
-        .expect("could not load html grammer");
+        if let Some(ref curr_tree) = entry.tree {
+            let trigger_point = Point::new(pos.line as usize, pos.character as usize);
+            return query_position(curr_tree.root_node(), text, trigger_point);
+        }
+    }
 
-    let tree = parser.parse(&text, None)?;
-    let root_node = tree.root_node();
-    let trigger_point = Point::new(pos.line as usize, pos.character as usize);
+    None
+}
 
-    return query_position(root_node, text.as_str(), trigger_point);
+/// Convert an `lsp_types::TextDocumentContentChangeEvent` to a `tree_sitter::InputEdit`
+pub fn text_doc_change_to_ts_edit(
+    change: &TextDocumentContentChangeEvent,
+    doc: &FullTextDocument,
+) -> Result<InputEdit, &'static str> {
+    let range = change.range.ok_or("Invalid edit range")?;
+    let start = range.start;
+    let end = range.end;
+
+    let start_byte = doc.offset_at(start) as usize;
+    let new_end_byte = start_byte + change.text.len();
+    let new_end_pos = doc.position_at(new_end_byte as u32);
+
+    Ok(InputEdit {
+        start_byte,
+        old_end_byte: doc.offset_at(end) as usize,
+        new_end_byte,
+        start_position: Point {
+            row: start.line as usize,
+            column: start.character as usize,
+        },
+        old_end_position: Point {
+            row: end.line as usize,
+            column: end.character as usize,
+        },
+        new_end_position: Point {
+            row: new_end_pos.line as usize,
+            column: new_end_pos.character as usize,
+        },
+    })
 }
 
 #[cfg(test)]
@@ -152,6 +286,69 @@ mod tests {
         // let expected = get_position(tree.root_node(), text, 0, 8);
         // assert_eq!(matches, expected);
         assert_eq!(matches, Some(Position::AttributeName("hx-".to_string())));
+    }
+
+    #[test]
+    fn test_it_suggests_normal_when_active() {
+        let text = r##"<div hx-ext="ws"><div hx- ></div></div>"##;
+        let tree = prepare_tree(text);
+
+        let matches = query_position(tree.root_node(), text, Point::new(0, 25));
+
+        assert_eq!(matches, Some(Position::AttributeName("hx-".to_string())));
+    }
+
+    #[test]
+    fn test_it_suggests_extension_when_active() {
+        let text = r##"<div hx-ext="ws"><div ws- ></div></div>"##;
+        let tree = prepare_tree(text);
+
+        let matches = query_position(tree.root_node(), text, Point::new(0, 25));
+
+        assert_eq!(matches, Some(Position::AttributeName("ws-".to_string())));
+    }
+
+    #[test]
+    fn test_it_suggests_extension_preload_when_active() {
+        let text = r##"<div hx-ext="preload"><div pre ></div></div>"##;
+        let tree = prepare_tree(text);
+
+        let matches = query_position(tree.root_node(), text, Point::new(0, 32));
+
+        assert_eq!(
+            matches,
+            Some(Position::AttributeName("preload".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_it_suggests_extension_starting_with_hx_when_active() {
+        let text = r##"<div hx-ext="head-support"><div hx- ></div></div>"##;
+        let tree = prepare_tree(text);
+
+        let matches = query_position(tree.root_node(), text, Point::new(0, 35));
+
+        assert_eq!(matches, Some(Position::AttributeName("hx-".to_string())));
+    }
+
+    #[test]
+    fn test_it_suggest_extension_in_same_element() {
+        let text = r##"<div hx-ext="sse" sse- ></div>"##;
+        let tree = prepare_tree(text);
+
+        let matches = query_position(tree.root_node(), text, Point::new(0, 22));
+
+        assert_eq!(matches, Some(Position::AttributeName("sse-".to_string())));
+    }
+
+    #[test]
+    fn test_it_does_not_suggest_when_extension_not_active() {
+        let text = r##"<div ws- ></div>"##;
+        let tree = prepare_tree(text);
+
+        let matches = query_position(tree.root_node(), text, Point::new(0, 8));
+
+        assert_eq!(matches, None)
     }
 
     #[test]
@@ -290,7 +487,7 @@ mod tests {
     }
 
     #[test]
-    fn test_it_suggests_attr_names_for_incoplete_quoted_value_in_between_attributes() {
+    fn test_it_suggests_attr_names_for_incomplete_quoted_value_in_between_attributes() {
         let text = r##"<div hx-get="/foo" hx- hx-swap="#swap"></div>
         <span class="foo" />"##;
 

@@ -1,42 +1,15 @@
 use crate::{
     htmx::{hx_completion, hx_hover, HxCompletion},
-    text_store::TEXT_STORE,
+    text_store::{DocInfo, DOCUMENT_STORE},
+    tree_sitter::text_doc_change_to_ts_edit,
 };
 use log::{debug, error, warn};
 use lsp_server::{Message, Notification, Request, RequestId};
-use lsp_types::{CompletionContext, CompletionParams, CompletionTriggerKind, HoverParams};
-
-#[derive(serde::Deserialize, Debug)]
-struct Text {
-    text: String,
-}
-
-#[derive(serde::Deserialize, Debug)]
-struct TextDocumentLocation {
-    uri: String,
-}
-
-#[derive(serde::Deserialize, Debug)]
-struct TextDocumentChanges {
-    #[serde(rename = "textDocument")]
-    text_document: TextDocumentLocation,
-
-    #[serde(rename = "contentChanges")]
-    content_changes: Vec<Text>,
-}
-
-#[derive(serde::Deserialize, Debug)]
-struct TextDocumentOpened {
-    uri: String,
-
-    text: String,
-}
-
-#[derive(serde::Deserialize, Debug)]
-struct TextDocumentOpen {
-    #[serde(rename = "textDocument")]
-    text_document: TextDocumentOpened,
-}
+use lsp_textdocument::FullTextDocument;
+use lsp_types::{
+    notification::{DidChangeTextDocument, DidOpenTextDocument},
+    CompletionContext, CompletionParams, CompletionTriggerKind, HoverParams,
+};
 
 #[derive(Debug)]
 pub struct HtmxAttributeCompletion {
@@ -61,20 +34,50 @@ pub enum HtmxResult {
 // ignore snakeCase
 #[allow(non_snake_case)]
 fn handle_didChange(noti: Notification) -> Option<HtmxResult> {
-    let text_document_changes: TextDocumentChanges = serde_json::from_value(noti.params).ok()?;
-    let uri = text_document_changes.text_document.uri;
-    let text = text_document_changes.content_changes[0].text.to_string();
+    match cast_notif::<DidChangeTextDocument>(noti) {
+        Ok(params) => {
+            match DOCUMENT_STORE
+                .get()
+                .expect("text store not initialized")
+                .lock()
+                .expect("text store mutex poisoned")
+                .get_mut(params.text_document.uri.as_str())
+            {
+                Some(entry) => {
+                    entry
+                        .doc
+                        .update(&params.content_changes, params.text_document.version);
 
-    if text_document_changes.content_changes.len() > 1 {
-        error!("more than one content change, please be wary");
+                    if let Some(ref mut curr_tree) = entry.tree {
+                        for edit in params.content_changes.iter() {
+                            match text_doc_change_to_ts_edit(edit, &entry.doc) {
+                                Ok(edit) => {
+                                    curr_tree.edit(&edit);
+                                }
+                                Err(e) => {
+                                    error!("handle_didChange Bad edit info, failed to edit tree -- Error: {e}");
+                                }
+                            }
+                        }
+                    } else {
+                        error!(
+                            "handle_didChange tree for {} is None",
+                            params.text_document.uri.as_str()
+                        );
+                    }
+                }
+                None => {
+                    error!(
+                        "handle_didChange No corresponding doc for supplied edits -- {}",
+                        params.text_document.uri.as_str()
+                    );
+                }
+            }
+        }
+        Err(e) => {
+            error!("Failed the deserialize DidChangeTextDocument params -- Error {e}");
+        }
     }
-
-    TEXT_STORE
-        .get()
-        .expect("text store not initialized")
-        .lock()
-        .expect("text store mutex poisoned")
-        .insert(uri, text);
 
     None
 }
@@ -82,20 +85,33 @@ fn handle_didChange(noti: Notification) -> Option<HtmxResult> {
 #[allow(non_snake_case)]
 fn handle_didOpen(noti: Notification) -> Option<HtmxResult> {
     debug!("handle_didOpen params {:?}", noti.params);
-    let text_document_changes = match serde_json::from_value::<TextDocumentOpen>(noti.params) {
-        Ok(p) => p.text_document,
+    let text_doc_open = match cast_notif::<DidOpenTextDocument>(noti) {
+        Ok(params) => params,
         Err(err) => {
             error!("handle_didOpen parsing params error : {:?}", err);
             return None;
         }
     };
 
-    TEXT_STORE
+    let doc = FullTextDocument::new(
+        text_doc_open.text_document.language_id,
+        text_doc_open.text_document.version,
+        text_doc_open.text_document.text,
+    );
+    let mut parser = ::tree_sitter::Parser::new();
+    parser
+        .set_language(tree_sitter_html::language())
+        .expect("Failed to load HTML grammar");
+    let tree = parser.parse(doc.get_content(None), None);
+
+    let doc = DocInfo { doc, parser, tree };
+
+    DOCUMENT_STORE
         .get()
         .expect("text store not initialized")
         .lock()
         .expect("text store mutex poisoned")
-        .insert(text_document_changes.uri, text_document_changes.text);
+        .insert(text_doc_open.text_document.uri.to_string(), doc);
 
     None
 }
@@ -116,8 +132,22 @@ fn handle_completion(req: Request) -> Option<HtmxResult> {
             ..
         }) => {
             let items = match hx_completion(completion.text_document_position) {
-                Some(items) => items,
-                None => {
+                (Some(items), Some(ext_items)) => {
+                    let mut temp = items.to_vec();
+                    for ext_item in ext_items {
+                        temp.append(&mut ext_item.to_vec());
+                    }
+                    temp
+                }
+                (Some(items), None) => items.to_vec(),
+                (None, Some(ext_items)) => {
+                    let mut temp = Vec::new();
+                    for ext_item in ext_items {
+                        temp.append(&mut ext_item.to_vec());
+                    }
+                    temp
+                }
+                (None, None) => {
                     error!("EMPTY RESULTS OF COMPLETION");
                     return None;
                 }
@@ -129,7 +159,7 @@ fn handle_completion(req: Request) -> Option<HtmxResult> {
             );
 
             Some(HtmxResult::AttributeCompletion(HtmxAttributeCompletion {
-                items: items.to_vec(),
+                items,
                 id: req.id,
             }))
         }
@@ -186,10 +216,23 @@ pub fn handle_other(msg: Message) -> Option<HtmxResult> {
     None
 }
 
+fn cast_notif<R>(notif: Notification) -> anyhow::Result<R::Params>
+where
+    R: lsp_types::notification::Notification,
+    R::Params: serde::de::DeserializeOwned,
+{
+    match notif.extract(R::METHOD) {
+        Ok(value) => Ok(value),
+        Err(e) => Err(anyhow::anyhow!(
+            "cast_notif Failed to extract params -- Error: {e}"
+        )),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{handle_request, HtmxResult, Request};
-    use crate::text_store::{init_text_store, TEXT_STORE};
+    use crate::text_store::{init_text_store, DocInfo, DOCUMENT_STORE};
     use std::sync::Once;
 
     static SETUP: Once = Once::new();
@@ -198,12 +241,21 @@ mod tests {
             init_text_store();
         });
 
-        TEXT_STORE
+        let doc =
+            lsp_textdocument::FullTextDocument::new("html".to_string(), 0, content.to_string());
+        let mut parser = ::tree_sitter::Parser::new();
+        parser
+            .set_language(tree_sitter_html::language())
+            .expect("Failed to load HTML grammar");
+        let tree = parser.parse(doc.get_content(None), None);
+        let doc_info = DocInfo { doc, parser, tree };
+
+        DOCUMENT_STORE
             .get()
             .expect("text store not initialized")
             .lock()
             .expect("text store mutex poisoned")
-            .insert(file.to_string(), content.to_string());
+            .insert(file.to_string(), doc_info);
     }
 
     #[test]

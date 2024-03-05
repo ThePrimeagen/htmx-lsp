@@ -27,15 +27,40 @@ macro_rules! build_completion {
     };
 }
 
-pub fn hx_completion(text_params: TextDocumentPositionParams) -> Option<&'static [HxCompletion]> {
-    let result = crate::tree_sitter::get_position_from_lsp_completion(text_params.clone())?;
+pub fn hx_completion(
+    text_params: TextDocumentPositionParams,
+) -> (
+    Option<&'static [HxCompletion]>,
+    Option<Vec<&'static [HxCompletion]>>,
+) {
+    let result = crate::tree_sitter::get_position_from_lsp_completion(text_params.clone());
+    let ext_result = crate::tree_sitter::get_extension_completes(text_params.clone());
 
-    debug!("result: {:?} params: {:?}", result, text_params);
+    let comp = match result {
+        Some(Position::AttributeName(name)) => name.starts_with("hx-").then_some(HX_TAGS),
+        Some(Position::AttributeValue { name, .. }) => HX_ATTRIBUTE_VALUES.get(&name).copied(),
+        None => None,
+    };
 
-    match result {
-        Position::AttributeName(name) => name.starts_with("hx-").then_some(HX_TAGS),
-        Position::AttributeValue { name, .. } => HX_ATTRIBUTE_VALUES.get(&name).copied(),
-    }
+    let ext_comp = match ext_result {
+        Some(exts) => {
+            let mut comps = Vec::new();
+            for ext in exts.iter() {
+                // add matching refs to extension completes to Vec
+                // once extension completes have been added
+                comps.push(HX_EXTENSIONS[ext]);
+            }
+            Some(comps)
+        }
+        None => None,
+    };
+
+    debug!(
+        "result: {:?}, ext_result: {:?}, params: {:?}",
+        comp, ext_comp, text_params
+    );
+
+    (comp, ext_comp)
 }
 
 pub fn hx_hover(text_params: TextDocumentPositionParams) -> Option<HxCompletion> {
@@ -53,6 +78,91 @@ pub fn hx_hover(text_params: TextDocumentPositionParams) -> Option<HxCompletion>
         }
     }
 }
+
+pub static HX_EXTENSIONS: phf::Map<&'static str, &'static [HxCompletion]> = phf::phf_map! {
+    "class-tools" => build_completion![
+        ("classes", "./attributes/class-tools/classes.md"),
+        ("data-classes", "./attributes/class-tools/data-classes.md")
+    ] as &[_],
+    "client-side-templates" => build_completion![
+        ("handlebars-template", "./attributes/client-side-templates/handlebars-template.md"),
+        ("mustache-template", "./attributes/client-side-templates/mustache-template.md"),
+        ("mustache-array-template", "./attributes/client-side-templates/mustache-array-template.md"),
+        ("nunjucks-template", "./attributes/client-side-templates/nunjucks-template.md"),
+        ("xslt-template", "./attributes/client-side-templates/xslt-template.md")
+    ] as &[_],
+    "head-support" => build_completion![
+        ("hx-head", "./attributes/head-support/hx-head.md")
+    ] as &[_],
+    "include-vals" => build_completion![
+        ("include-vals", "./attributes/include-vals/include-vals.md")
+    ] as &[_],
+    "loading-states" => build_completion![
+        ("data-loading", "./attributes/loading-states/data-loading.md"),
+        ("data-loading-target", "./attributes/loading-states/data-loading-target.md"),
+        ("data-loading-states", "./attributes/loading-states/data-loading-states.md"),
+        ("data-loading-path", "./attributes/loading-states/data-loading-path.md"),
+        ("data-loading-disable", "./attributes/loading-states/data-loading-disable.md"),
+        ("data-loading-delay", "./attributes/loading-states/data-loading-delay.md"),
+        ("data-loading-class", "./attributes/loading-states/data-loading-class.md"),
+        ("data-loading-class-remove", "./attributes/loading-states/data-loading-class-remove.md"),
+        ("data-loading-aria-busy", "./attributes/loading-states/data-loading-aria-busy.md")
+    ] as &[_],
+    "path-deps" => build_completion![
+        ("path-deps", "./attributes/path-deps/path-deps.md")
+    ] as &[_],
+    "preload" => build_completion![
+        ("preload", "./attributes/preload/preload.md"),
+        ("preload-images", "./attributes/preload/preload-images.md")
+    ] as &[_],
+    "remove-me" => build_completion![
+        ("remove-me", "./attributes/remove-me/remove-me.md")
+    ] as &[_],
+    "response-targets" => build_completion![
+        ("hx-target-error", "./attributes/response-targets/hx-target-error.md")
+    ] as &[_],
+    "ws" => build_completion![
+        ("ws-connect", "./attributes/ws/ws-connect.md"),
+        ("ws-send", "./attributes/ws/ws-send.md")
+    ] as &[_],
+    "sse" => build_completion![
+        ("sse-connect", "./attributes/sse/sse-connect.md"),
+        ("sse-swap", "./attributes/sse/sse-swap.md")
+    ] as &[_],
+    "ajax-header" => build_completion![
+
+    ] as &[_],
+    "alpine-morph" => build_completion![
+
+    ] as &[_],
+    "debug" => build_completion![
+
+    ] as &[_],
+    "event-header" => build_completion![
+
+    ] as &[_],
+    "json-enc" => build_completion![
+
+    ] as &[_],
+    "idiomorph" => build_completion![
+
+    ] as &[_],
+    "method-override" => build_completion![
+
+    ] as &[_],
+    "morphdom-swap" => build_completion![
+
+    ] as &[_],
+    "multi-swap" => build_completion![
+
+    ] as &[_],
+    "restored" => build_completion![
+
+    ] as &[_],
+    "path-params" => build_completion![
+
+    ] as &[_],
+};
 
 pub static HX_TAGS: &[HxCompletion] = build_completion!(
     ("hx-boost", "./attributes/hx-boost.md"),
