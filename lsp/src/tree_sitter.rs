@@ -454,7 +454,7 @@ mod tests {
     }
 
     #[test]
-    fn test_it_suggests_attr_names_for_incoplete_quoted_value_in_between_attributes() {
+    fn test_it_suggests_attr_names_for_incomplete_quoted_value_in_between_attributes() {
         let text = r##"<div hx-get="/foo" hx- hx-swap="#swap"></div>
         <span class="foo" />"##;
 
