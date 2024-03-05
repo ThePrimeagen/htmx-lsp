@@ -86,6 +86,7 @@ pub static HX_EXTENSIONS: phf::Map<&'static str, &'static [HxCompletion]> = phf:
     "client-side-templates" => build_completion![
         ("handlebars-template", "./attributes/client-side-templates/handlebars-template.md"),
         ("mustache-template", "./attributes/client-side-templates/mustache-template.md"),
+        ("mustache-array-template", "./attributes/client-side-templates/mustache-array-template.md"),
         ("nunjucks-template", "./attributes/client-side-templates/nunjucks-template.md"),
         ("xslt-template", "./attributes/client-side-templates/xslt-template.md")
     ] as &[_],
