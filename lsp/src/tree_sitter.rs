@@ -289,6 +289,36 @@ mod tests {
     }
 
     #[test]
+    fn test_it_suggests_normal_when_active() {
+        let text = r##"<div hx-ext="ws"><div hx- ></div></div>"##;
+        let tree = prepare_tree(text);
+
+        let matches = query_position(tree.root_node(), text, Point::new(0, 25));
+
+        assert_eq!(matches, Some(Position::AttributeName("hx-".to_string())));
+    }
+
+    #[test]
+    fn test_it_suggests_extension_when_active() {
+        let text = r##"<div hx-ext="ws"><div ws- ></div></div>"##;
+        let tree = prepare_tree(text);
+
+        let matches = query_position(tree.root_node(), text, Point::new(0, 25));
+
+        assert_eq!(matches, Some(Position::AttributeName("ws-".to_string())));
+    }
+
+    #[test]
+    fn test_it_does_not_suggest_when_extension_not_active() {
+        let text = r##"<div ws- ></div>"##;
+        let tree = prepare_tree(text);
+
+        let matches = query_position(tree.root_node(), text, Point::new(0, 8));
+
+        assert_eq!(matches, None)
+    }
+
+    #[test]
     fn test_it_does_not_suggest_when_quote_not_initiated() {
         let text = r##"<div hx-swap= ></div>"##;
 
