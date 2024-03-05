@@ -309,6 +309,29 @@ mod tests {
     }
 
     #[test]
+    fn test_it_suggests_extension_preload_when_active() {
+        let text = r##"<div hx-ext="preload"><div pre ></div></div>"##;
+        let tree = prepare_tree(text);
+
+        let matches = query_position(tree.root_node(), text, Point::new(0, 32));
+
+        assert_eq!(
+            matches,
+            Some(Position::AttributeName("preload".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_it_suggests_extension_starting_with_hx_when_active() {
+        let text = r##"<div hx-ext="head-support"><div hx- ></div></div>"##;
+        let tree = prepare_tree(text);
+
+        let matches = query_position(tree.root_node(), text, Point::new(0, 35));
+
+        assert_eq!(matches, Some(Position::AttributeName("hx-".to_string())));
+    }
+
+    #[test]
     fn test_it_does_not_suggest_when_extension_not_active() {
         let text = r##"<div ws- ></div>"##;
         let tree = prepare_tree(text);

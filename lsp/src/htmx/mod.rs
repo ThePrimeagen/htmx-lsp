@@ -80,12 +80,6 @@ pub fn hx_hover(text_params: TextDocumentPositionParams) -> Option<HxCompletion>
 }
 
 pub static HX_EXTENSIONS: phf::Map<&'static str, &'static [HxCompletion]> = phf::phf_map! {
-    "ajax-header" => build_completion![
-
-    ] as &[_],
-    "alpine-morph" => build_completion![
-
-    ] as &[_],
     "class-tools" => build_completion![
         ("classes", "./hx-ext/class-tools/classes.md")
     ] as &[_],
@@ -95,23 +89,11 @@ pub static HX_EXTENSIONS: phf::Map<&'static str, &'static [HxCompletion]> = phf:
         ("nunjucks-template", "./hx-ext/client-side-templates/nunjucks-template.md"),
         ("xslt-template", "./hx-ext/client-side-templates/xslt-template.md")
     ] as &[_],
-    "debug" => build_completion![
-
-    ] as &[_],
-    "event-header" => build_completion![
-
-    ] as &[_],
     "head-support" => build_completion![
         ("hx-head", "./hx-ext/head-support/hx-head.md")
     ] as &[_],
     "include-vals" => build_completion![
         ("include-vals", "./hx-ext/include-vals/include-vals.md")
-    ] as &[_],
-    "json-enc" => build_completion![
-
-    ] as &[_],
-    "idiomorph" => build_completion![
-
     ] as &[_],
     "loading-states" => build_completion![
         ("data-loading", "./hx-ext/loading-states/data-loading.md"),
@@ -123,15 +105,6 @@ pub static HX_EXTENSIONS: phf::Map<&'static str, &'static [HxCompletion]> = phf:
         ("data-loading-class", "./hx-ext/loading-states/data-loading-class.md"),
         ("data-loading-class-remove", "./hx-ext/loading-states/data-loading-class-remove.md"),
         ("data-loading-aria-busy", "./hx-ext/loading-states/data-loading-aria-busy.md")
-    ] as &[_],
-    "method-override" => build_completion![
-
-    ] as &[_],
-    "morphdom-swap" => build_completion![
-
-    ] as &[_],
-    "multi-swap" => build_completion![
-
     ] as &[_],
     "path-deps" => build_completion![
         ("path-deps", "./hx-ext/path-deps/path-deps.md")
@@ -146,9 +119,6 @@ pub static HX_EXTENSIONS: phf::Map<&'static str, &'static [HxCompletion]> = phf:
     "response-targets" => build_completion![
         ("hx-target-error", "./hx-ext/response-targets/hx-target-error.md")
     ] as &[_],
-    "restored" => build_completion![
-
-    ] as &[_],
     "ws" => build_completion![
         ("ws-connect", "./hx-ext/ws/ws-connect.md"),
         ("ws-send", "./hx-ext/ws/ws-send.md")
@@ -156,6 +126,36 @@ pub static HX_EXTENSIONS: phf::Map<&'static str, &'static [HxCompletion]> = phf:
     "sse" => build_completion![
         ("sse-connect", "./hx-ext/sse/sse-connect.md"),
         ("sse-swap", "./hx-ext/sse/sse-swap.md")
+    ] as &[_],
+    "ajax-header" => build_completion![
+
+    ] as &[_],
+    "alpine-morph" => build_completion![
+
+    ] as &[_],
+    "debug" => build_completion![
+
+    ] as &[_],
+    "event-header" => build_completion![
+
+    ] as &[_],
+    "json-enc" => build_completion![
+
+    ] as &[_],
+    "idiomorph" => build_completion![
+
+    ] as &[_],
+    "method-override" => build_completion![
+
+    ] as &[_],
+    "morphdom-swap" => build_completion![
+
+    ] as &[_],
+    "multi-swap" => build_completion![
+
+    ] as &[_],
+    "restored" => build_completion![
+
     ] as &[_],
     "path-params" => build_completion![
 
