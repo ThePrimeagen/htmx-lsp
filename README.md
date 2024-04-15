@@ -30,7 +30,10 @@ Another option is to use [lsp-debug-tools](https://github.com/ThePrimeagen/lsp-d
 
 ### VSCode
 
-No published extension yet, but there is a development extension in the [`clients/vscode`](client/vscode/README.md) folder (with setup instructions)
+[Vscode extension](client/vscode/README.md) is bundled with each new release. However you have to manually set the path to the lsp in the vscode settings.
+```
+"htmx-lsp.intreperterPath": "<path>/htmx-lsp",
+```
 
 ## Development
 
