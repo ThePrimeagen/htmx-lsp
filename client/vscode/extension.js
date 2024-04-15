@@ -1,17 +1,21 @@
 // @ts-check
 const { LanguageClient } = require("vscode-languageclient/node");
+const vscode = require("vscode");
 const tmpdir = require("os").tmpdir();
 
 module.exports = {
   /** @param {import("vscode").ExtensionContext} context*/
   activate(context) {
+    /** @type {import("vscode").WorkspaceConfiguration} */
+    const config = vscode.workspace.getConfiguration('htmx-lsp');
+    const intreperterPath = config.get('intreperterPath');
     /** @type {import("vscode-languageclient/node").ServerOptions} */
     const serverOptions = {
       run: {
-        command: "htmx-lsp",
+        command: intreperterPath,
       },
       debug: {
-        command: "htmx-lsp",
+        command: intreperterPath,
         args: ["--file", `${tmpdir}/lsp.log`, "--level", "TRACE"],
       },
     };

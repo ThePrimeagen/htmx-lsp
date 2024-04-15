@@ -9,9 +9,14 @@ Future `todo!()`
 ### Setup your environment
 
 ```console
-# Build & link htmx-lsp
+# Build htmx-lsp
 cargo build
-ln -s "$(pwd)/target/debug/htmx-lsp" "/usr/local/bin/htmx-lsp" # Or another location in your $PATH
+
+# Add htmx-lsp executable to $PATH
+ln -s "$(pwd)/target/debug/htmx-lsp" "/usr/local/bin/htmx-lsp"
+
+# or add it to vscode settings (after starting vscode extension)
+"htmx-lsp.intreperterPath": "<path>/htmx-lsp",
 
 # Setup JS
 cd client/vscode
@@ -20,7 +25,7 @@ npm install
 
 ### Debugging
 
-In VSC\*ode, go to the `Run & Debug` sidebar (Ctrl + Shft + D) and click the `Debug LSP Extension` button. This will open a new VSC\*de instance with the lsp client installed.
+In VSC\*ode, go to the `Run & Debug` sidebar (Ctrl + Shft + D) and click the `Debug LSP Extension` button. This will open a new VSC\*de instance.
 
 To get the lsp server logs, run:
 

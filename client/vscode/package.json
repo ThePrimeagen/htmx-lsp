@@ -17,6 +17,18 @@
     "onLanguage:html"
   ],
   "main": "./extension",
+  "contributes": {
+    "configuration": {
+      "title": "htmx-lsp",
+      "properties": {
+        "htmx-lsp.intreperterPath": {
+          "type": "string",
+          "default": "htmx-lsp",
+          "description": "Path to the htmx-lsp binary"
+        }
+      }
+    }
+  },
   "dependencies": {
     "vscode-languageclient": "^8.1.0"
   }
