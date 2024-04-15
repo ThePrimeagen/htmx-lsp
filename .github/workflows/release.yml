@@ -107,11 +107,24 @@ jobs:
           name: built-binaries
           path: bin
 
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+            node-version: 21
+
+      # Vscode extension wants to bundle the lsp binary too
+      - name: Build VSIX
+        run: |
+            npm ci
+            npm run vsce:package
+
       - name: Publish release
         uses: softprops/action-gh-release@v1
         if: env.SHOULD_RELEASE == 'yes'
         with:
-          files: bin/*
+          files: |
+            bin/*
+            htxm-lsp.vsix
           tag_name: ${{ env.RELEASE_VERSION }}
           fail_on_unmatched_files: true
           generate_release_notes: true
