@@ -7,7 +7,7 @@
       "name": "Debug LSP Extension",
       "runtimeExecutable": "${execPath}",
       "args": [
-        "--extensionDevelopmentPath=${workspaceRoot}/client/vscode",
+        "--extensionDevelopmentPath=${workspaceRoot}",
         "--disable-extensions",
         "${workspaceRoot}/htmx.test.html"
       ]

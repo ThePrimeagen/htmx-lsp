@@ -20,6 +20,25 @@
   "engines": {
     "vscode": "^1.87.0"
   },
+  "activationEvents": [
+    "onLanguage:html"
+  ],
+  "main": "./client/vscode/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "htmx-lsp",
+      "properties": {
+        "htmx-lsp.intreperterPath": {
+          "type": "string",
+          "default": "htmx-lsp",
+          "description": "Path to the htmx-lsp binary"
+        }
+      }
+    }
+  },
+  "scripts": {
+		"vscode:package": "npx vsce package -o ./htxm-lsp.vsix"
+	},
   "dependencies": {
     "vscode-languageclient": "^8.1.0"
   }

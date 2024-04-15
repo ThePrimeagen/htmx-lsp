@@ -1,0 +1,9 @@
+/lsp
+/.github
+/src
+/util
+/target
+/Cargo.lock
+/Cargo.toml
+/enable.lua
+/htmx.test.html
