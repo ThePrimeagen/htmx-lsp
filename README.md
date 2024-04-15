@@ -1,6 +1,6 @@
 <div align="center">
-  <a href="https://github.com/ThePrimeagen/htmx-lsp#gh-light-mode-only"><img src="assets/logo.svg#gh-light-mode-only"        width="300px" alt="HTMX-LSP logo"/></a>
-  <a href="https://github.com/ThePrimeagen/htmx-lsp#gh-dark-mode-only"><img src="assets/logo.darkmode.svg#gh-dark-mode-only" width="300px" alt="HTMX-LSP logo"/></a>
+  <a href="https://github.com/ThePrimeagen/htmx-lsp#gh-light-mode-only"><img src="assets/logo.png#gh-light-mode-only"        width="300px" alt="HTMX-LSP logo"/></a>
+  <a href="https://github.com/ThePrimeagen/htmx-lsp#gh-dark-mode-only"><img src="assets/logo.darkmode.png#gh-dark-mode-only" width="300px" alt="HTMX-LSP logo"/></a>
   <br>
   <a href="https://crates.io/crates/htmx-lsp"><img alt="crates.io" src="https://img.shields.io/crates/v/htmx-lsp.svg?style=for-the-badge&color=bc3f48&logo=rust" height="20"></a>
   <a href="https://github.com/ThePrimeagen/htmx-lsp/actions?query=branch%3Amaster"><img alt="build status" src="https://img.shields.io/github/actions/workflow/status/ThePrimeagen/htmx-lsp/ci.yml?branch=master&style=for-the-badge&logo=github" height="20"></a>
