@@ -16,10 +16,9 @@ pub enum Position {
 // TODO: remove if not used
 #[allow(dead_code)]
 fn get_text(node: Node<'_>, source: &str) -> String {
-    return node
-        .utf8_text(source.as_bytes())
+    node.utf8_text(source.as_bytes())
         .expect("getting text should never fail")
-        .to_string();
+        .to_string()
 }
 
 // TODO: remove if not used
@@ -71,7 +70,7 @@ fn find_element_referent_to_current_node(node: Node<'_>) -> Option<Node<'_>> {
         return Some(node);
     }
 
-    return find_element_referent_to_current_node(node.parent()?);
+    find_element_referent_to_current_node(node.parent()?)
 }
 
 fn query_position(root: Node<'_>, source: &str, trigger_point: Point) -> Option<Position> {
@@ -122,7 +121,7 @@ pub fn get_position_from_lsp_completion(
     let root_node = tree.root_node();
     let trigger_point = Point::new(pos.line as usize, pos.character as usize);
 
-    return query_position(root_node, text.as_str(), trigger_point);
+    query_position(root_node, text.as_str(), trigger_point)
 }
 
 #[cfg(test)]

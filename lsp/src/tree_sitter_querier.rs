@@ -95,7 +95,7 @@ pub fn query_attr_keys_for_completion(
     let props = query_props(query_string, node, source, trigger_point);
     let attr_name = props.get("attr_name")?;
 
-    if props.get("unfinished_tag").is_some() {
+    if props.contains_key("unfinished_tag") {
         return None;
     }
 
@@ -159,7 +159,7 @@ pub fn query_attr_values_for_completion(
 
     debug!("query_attr_values_for_completion attr_name {:?}", attr_name);
 
-    if props.get("open_quote_error").is_some() || props.get("empty_attribute").is_some() {
+    if props.contains_key("open_quote_error") || props.contains_key("empty_attribute") {
         return Some(Position::AttributeValue {
             name: attr_name.value.to_owned(),
             value: "".to_string(),

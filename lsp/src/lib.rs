@@ -21,7 +21,7 @@ use crate::{
 };
 
 fn to_completion_list(items: Vec<HxCompletion>) -> CompletionList {
-    return CompletionList {
+    CompletionList {
         is_incomplete: true,
         items: items
             .iter()
@@ -46,7 +46,7 @@ fn to_completion_list(items: Vec<HxCompletion>) -> CompletionList {
                 tags: None,
             })
             .collect(),
-    };
+    }
 }
 
 fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
@@ -68,7 +68,7 @@ fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
 
         match match result {
             Some(HtmxResult::AttributeCompletion(c)) => {
-                let str = match serde_json::to_value(&to_completion_list(c.items)) {
+                let str = match serde_json::to_value(to_completion_list(c.items)) {
                     Ok(s) => s,
                     Err(_) => continue,
                 };
