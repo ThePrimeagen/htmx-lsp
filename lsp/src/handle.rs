@@ -171,14 +171,14 @@ pub fn handle_request(req: Request) -> Option<HtmxResult> {
 }
 
 pub fn handle_notification(noti: Notification) -> Option<HtmxResult> {
-    return match noti.method.as_str() {
+    match noti.method.as_str() {
         "textDocument/didChange" => handle_didChange(noti),
         "textDocument/didOpen" => handle_didOpen(noti),
         s => {
             debug!("unhandled notification: {:?}", s);
             None
         }
-    };
+    }
 }
 
 pub fn handle_other(msg: Message) -> Option<HtmxResult> {

@@ -8,9 +8,9 @@ use anyhow::Result;
 use htmx::HxCompletion;
 use log::{debug, error, info, warn};
 use lsp_types::{
-    CompletionItem, CompletionItemKind, CompletionList, HoverContents, InitializeParams,
-    MarkupContent, ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind,
-    WorkDoneProgressOptions,
+    ClientInfo, CompletionItem, CompletionItemKind, CompletionList, HoverContents,
+    InitializeParams, MarkupContent, ServerCapabilities, TextDocumentSyncCapability,
+    TextDocumentSyncKind, WorkDoneProgressOptions,
 };
 
 use lsp_server::{Connection, Message, Response};
@@ -21,7 +21,7 @@ use crate::{
 };
 
 fn to_completion_list(items: Vec<HxCompletion>) -> CompletionList {
-    return CompletionList {
+    CompletionList {
         is_incomplete: true,
         items: items
             .iter()
@@ -46,16 +46,20 @@ fn to_completion_list(items: Vec<HxCompletion>) -> CompletionList {
                 tags: None,
             })
             .collect(),
-    };
+    }
 }
 
 fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
-    let _params: InitializeParams = serde_json::from_value(params).unwrap();
+    let params: InitializeParams = serde_json::from_value(params).unwrap();
 
     info!("STARTING EXAMPLE MAIN LOOP");
 
     for msg in &connection.receiver {
         error!("connection received message: {:?}", msg);
+        let id = match &msg {
+            Message::Request(ref req) => Some(req.id.clone()),
+            _ => None,
+        };
         let result = match msg {
             Message::Notification(not) => handle_notification(not),
             Message::Request(req) => handle_request(req),
@@ -64,7 +68,7 @@ fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
 
         match match result {
             Some(HtmxResult::AttributeCompletion(c)) => {
-                let str = match serde_json::to_value(&to_completion_list(c.items)) {
+                let str = match serde_json::to_value(to_completion_list(c.items)) {
                     Ok(s) => s,
                     Err(_) => continue,
                 };
@@ -101,7 +105,19 @@ fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
                     error: None,
                 }))
             }
-            None => continue,
+            None => {
+                // Sending a response with `result == None` will crash the helix client
+                let id = match (id, &params.client_info) {
+                    (_, Some(ClientInfo { name, .. })) if name.eq("helix") => continue,
+                    (Some(id), _) => id,
+                    _ => continue,
+                };
+                connection.sender.send(Message::Response(Response {
+                    id,
+                    result: None,
+                    error: None,
+                }))
+            }
         } {
             Ok(_) => {}
             Err(e) => error!("failed to send response: {:?}", e),
