@@ -28,7 +28,7 @@ fn to_completion_list(items: Vec<HxCompletion>) -> CompletionList {
             .map(|x| CompletionItem {
                 label: x.name.to_string(),
                 label_details: None,
-                kind: Some(CompletionItemKind::TEXT),
+                kind: Some(CompletionItemKind::PROPERTY),
                 detail: Some(x.desc.to_string()),
                 documentation: None,
                 deprecated: Some(false),
