@@ -236,7 +236,7 @@ mod tests {
                 assert!(h.value.starts_with("hx-target"));
             }
             _ => {
-                panic!("unexpected result: {:?}", result);
+                panic!("unexpected result: {result:?}");
             }
         }
     }
@@ -271,7 +271,7 @@ mod tests {
                 assert!(h.value.starts_with("hx-target"));
             }
             _ => {
-                panic!("unexpected result: {:?}", result);
+                panic!("unexpected result: {result:?}");
             }
         }
     }
