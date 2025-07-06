@@ -42,7 +42,7 @@ pub fn get_text_document(uri: &Url) -> Option<String> {
 /// Find the start and end indices of a word inside the given line
 /// Borrowed from RLS
 fn find_word_at_pos(line: &str, col: usize) -> (usize, usize) {
-    let line_ = format!("{line} ");
+    let line_ = line.to_string();
     let is_ident_char = |c: char| c.is_alphanumeric() || c == '_' || c == '-';
 
     let start = line_
