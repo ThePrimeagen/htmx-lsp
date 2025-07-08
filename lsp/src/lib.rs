@@ -8,9 +8,9 @@ use anyhow::Result;
 use htmx::HxDocItem;
 use log::{debug, error, info, warn};
 use lsp_types::{
-    ClientInfo, CompletionItem, CompletionItemKind, CompletionList, HoverContents,
-    InitializeParams, MarkupContent, ServerCapabilities, TextDocumentSyncCapability,
-    TextDocumentSyncKind, WorkDoneProgressOptions,
+    ClientInfo, Command, CompletionItem, CompletionItemKind, CompletionList, HoverContents,
+    InitializeParams, InsertTextFormat, MarkupContent, ServerCapabilities,
+    TextDocumentSyncCapability, TextDocumentSyncKind, WorkDoneProgressOptions,
 };
 
 use lsp_server::{Connection, Message, Response};
@@ -25,25 +25,33 @@ fn to_completion_list(items: Vec<HxDocItem>) -> CompletionList {
         is_incomplete: true,
         items: items
             .iter()
-            .map(|x| CompletionItem {
-                label: x.name.to_string(),
-                label_details: None,
-                kind: Some(CompletionItemKind::PROPERTY),
-                detail: Some(x.desc.to_string()),
-                documentation: None,
-                deprecated: Some(false),
-                preselect: None,
-                sort_text: None,
-                filter_text: None,
-                insert_text: None,
-                insert_text_format: None,
-                insert_text_mode: None,
-                text_edit: None,
-                additional_text_edits: None,
-                command: None,
-                commit_characters: None,
-                data: None,
-                tags: None,
+            .map(|x| {
+                let insert = x.name.to_string() + "=\"$1\"";
+
+                CompletionItem {
+                    label: x.name.to_string(),
+                    label_details: None,
+                    kind: Some(CompletionItemKind::PROPERTY),
+                    detail: Some(x.desc.to_string()),
+                    documentation: None,
+                    deprecated: Some(false),
+                    preselect: None,
+                    sort_text: None,
+                    filter_text: None,
+                    insert_text: Some(insert),
+                    insert_text_format: Some(InsertTextFormat::SNIPPET),
+                    insert_text_mode: None,
+                    text_edit: None,
+                    additional_text_edits: None,
+                    command: Some(Command {
+                        title: String::from("Suggest"),
+                        command: "editor.action.triggerSuggest".to_string(),
+                        arguments: None,
+                    }),
+                    commit_characters: None,
+                    data: None,
+                    tags: None,
+                }
             })
             .collect(),
     }
