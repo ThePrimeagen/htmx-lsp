@@ -5,7 +5,7 @@ mod tree_sitter;
 mod tree_sitter_querier;
 
 use anyhow::Result;
-use htmx::HxDocItem;
+use htmx::HxCompletionValue;
 use log::{debug, error, info, warn};
 use lsp_types::{
     ClientInfo, Command, CompletionItem, CompletionItemKind, CompletionList, HoverContents,
@@ -20,40 +20,42 @@ use crate::{
     text_store::init_text_store,
 };
 
-fn to_completion_list(items: Vec<HxDocItem>) -> CompletionList {
-    CompletionList {
-        is_incomplete: true,
-        items: items
-            .iter()
-            .map(|x| {
-                let insert = x.name.to_string() + "=\"$1\"";
-
-                CompletionItem {
+fn to_completion_list(items: HxCompletionValue) -> CompletionList {
+    match items {
+        HxCompletionValue::AttributeName(items) => CompletionList {
+            is_incomplete: true,
+            items: items
+                .to_vec()
+                .iter()
+                .map(|x| CompletionItem {
                     label: x.name.to_string(),
-                    label_details: None,
-                    kind: Some(CompletionItemKind::PROPERTY),
+                    kind: Some(CompletionItemKind::VALUE),
                     detail: Some(x.desc.to_string()),
-                    documentation: None,
-                    deprecated: Some(false),
-                    preselect: None,
-                    sort_text: None,
-                    filter_text: None,
-                    insert_text: Some(insert),
+                    // TODO: Figure out if we can use edit_text instead of insert_text here
+                    insert_text: Some(x.name.to_string() + "=\"$1\""),
                     insert_text_format: Some(InsertTextFormat::SNIPPET),
-                    insert_text_mode: None,
-                    text_edit: None,
-                    additional_text_edits: None,
                     command: Some(Command {
                         title: String::from("Suggest"),
                         command: "editor.action.triggerSuggest".to_string(),
                         arguments: None,
                     }),
-                    commit_characters: None,
-                    data: None,
-                    tags: None,
-                }
-            })
-            .collect(),
+                    ..Default::default()
+                })
+                .collect(),
+        },
+        HxCompletionValue::AttributeValue(items) => CompletionList {
+            is_incomplete: true,
+            items: items
+                .to_vec()
+                .iter()
+                .map(|x| CompletionItem {
+                    label: x.name.to_string(),
+                    kind: Some(CompletionItemKind::PROPERTY),
+                    detail: Some(x.desc.to_string()),
+                    ..Default::default()
+                })
+                .collect(),
+        },
     }
 }
 

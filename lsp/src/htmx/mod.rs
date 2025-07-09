@@ -10,6 +10,12 @@ pub struct HxDocItem {
     pub desc: &'static str,
 }
 
+#[derive(Clone, Debug)]
+pub enum HxCompletionValue {
+    AttributeName(&'static [HxDocItem]),
+    AttributeValue(&'static [HxDocItem]),
+}
+
 macro_rules! build_completion {
     ($(($name:expr, $desc:expr)),*) => {
         &[
@@ -21,14 +27,18 @@ macro_rules! build_completion {
     };
 }
 
-pub fn hx_completion(text_params: TextDocumentPositionParams) -> Option<&'static [HxDocItem]> {
+pub fn hx_completion(text_params: TextDocumentPositionParams) -> Option<HxCompletionValue> {
     let result = crate::tree_sitter::get_position_from_lsp_completion(text_params.clone())?;
 
     debug!("result: {:?} params: {:?}", result, text_params);
 
     match result {
-        Position::AttributeName(name) => name.starts_with("hx-").then_some(HX_TAGS),
-        Position::AttributeValue { name, .. } => HX_ATTRIBUTE_VALUES.get(&name).copied(),
+        Position::AttributeName(name) => Some(HxCompletionValue::AttributeName(
+            name.starts_with("hx-").then_some(HX_TAGS)?,
+        )),
+        Position::AttributeValue { name, .. } => Some(HxCompletionValue::AttributeValue(
+            HX_ATTRIBUTE_VALUES.get(&name).copied()?,
+        )),
     }
 }
 
