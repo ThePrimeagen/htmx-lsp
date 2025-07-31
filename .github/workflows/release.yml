@@ -17,27 +17,27 @@ jobs:
         build:
           - {
               NAME: linux-x64,
-              OS: ubuntu-22.04,
+              OS: ubuntu-24.04,
               TARGET: x86_64-unknown-linux-gnu,
             }
           - {
               NAME: windows-x64,
-              OS: windows-2022,
+              OS: windows-2025,
               TARGET: x86_64-pc-windows-msvc,
             }
           - {
               NAME: windows-arm64,
-              OS: windows-2022,
+              OS: windows-11-arm,
               TARGET: aarch64-pc-windows-msvc,
             }
           - {
               NAME: darwin-x64,
-              OS: macos-12,
+              OS: macos-13,
               TARGET: x86_64-apple-darwin,
             }
           - {
               NAME: darwin-arm64,
-              OS: macos-12,
+              OS: macos-15,
               TARGET: aarch64-apple-darwin,
             }
     steps:
@@ -67,7 +67,7 @@ jobs:
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
-          name: built-binaries
+          name: built-binaries-${{ matrix.build.TARGET }}
           path: bin/*
 
   release:
@@ -104,7 +104,8 @@ jobs:
         uses: actions/download-artifact@v4
         if: env.SHOULD_RELEASE == 'yes'
         with:
-          name: built-binaries
+          pattern: built-binaries-*
+          merge-multiple: true
           path: bin
 
       - name: Publish release
