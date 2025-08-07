@@ -4,45 +4,54 @@ use std::{
     sync::{Arc, Mutex, OnceLock},
 };
 
-use lsp_types::{TextDocumentPositionParams, Url};
+use lsp_textdocument::FullTextDocument;
+use lsp_types::{Position, Range, TextDocumentPositionParams, Url};
+use tree_sitter::{Parser, Tree};
 
-type TxtStore = HashMap<String, String>;
+pub struct DocInfo {
+    pub doc: FullTextDocument,
+    pub parser: Parser,
+    pub tree: Option<Tree>,
+}
 
-pub struct TextStore(TxtStore);
+type DocStore = HashMap<String, DocInfo>;
 
-impl Deref for TextStore {
-    type Target = TxtStore;
+#[derive(Default)]
+pub struct DocumentStore(DocStore);
+
+impl Deref for DocumentStore {
+    type Target = DocStore;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl DerefMut for TextStore {
+impl DerefMut for DocumentStore {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
-pub static TEXT_STORE: OnceLock<Arc<Mutex<TextStore>>> = OnceLock::new();
+pub static DOCUMENT_STORE: OnceLock<Arc<Mutex<DocumentStore>>> = OnceLock::new();
 
 pub fn init_text_store() {
-    _ = TEXT_STORE.set(Arc::new(Mutex::new(TextStore(HashMap::new()))));
+    _ = DOCUMENT_STORE.set(Arc::new(Mutex::new(DocumentStore::default())));
 }
 
-pub fn get_text_document(uri: &Url) -> Option<String> {
-    return TEXT_STORE
+pub fn get_text_document(uri: &Url, range: Option<Range>) -> Option<String> {
+    return DOCUMENT_STORE
         .get()
         .expect("text store not initialized")
         .lock()
         .expect("text store mutex poisoned")
         .get(&uri.to_string())
-        .cloned();
+        .map(|doc| doc.doc.get_content(range).to_string());
 }
 
 /// Find the start and end indices of a word inside the given line
 /// Borrowed from RLS
 fn find_word_at_pos(line: &str, col: usize) -> (usize, usize) {
-    let line_ = format!("{} ", line);
+    let line_ = format!("{line} ");
     let is_ident_char = |c: char| c.is_alphanumeric() || c == '_' || c == '-';
 
     let start = line_
@@ -67,20 +76,20 @@ fn find_word_at_pos(line: &str, col: usize) -> (usize, usize) {
 
 pub fn get_word_from_pos_params(pos_params: &TextDocumentPositionParams) -> anyhow::Result<String> {
     let uri = &pos_params.text_document.uri;
-    let line = pos_params.position.line as usize;
+    let line = pos_params.position.line;
     let col = pos_params.position.character as usize;
 
-    match get_text_document(uri) {
-        Some(text) => {
-            let line_conts = match text.lines().nth(line) {
-                Some(conts) => conts,
-                None => {
-                    return Err(anyhow::anyhow!(
-                        "get_word_from_pos_params Failed to get word under cursor"
-                    ));
-                }
-            };
-            let (start, end) = find_word_at_pos(line_conts, col);
+    let range = Range {
+        start: Position { line, character: 0 },
+        end: Position {
+            line,
+            character: u32::MAX,
+        },
+    };
+
+    match get_text_document(uri, Some(range)) {
+        Some(line_conts) => {
+            let (start, end) = find_word_at_pos(&line_conts, col);
             Ok(String::from(&line_conts[start..end]))
         }
         None => Err(anyhow::anyhow!(
