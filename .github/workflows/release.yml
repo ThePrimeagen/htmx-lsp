@@ -17,32 +17,32 @@ jobs:
         build:
           - {
               NAME: linux-x64,
-              OS: ubuntu-22.04,
+              OS: ubuntu-24.04,
               TARGET: x86_64-unknown-linux-gnu,
             }
           - {
               NAME: windows-x64,
-              OS: windows-2022,
+              OS: windows-2025,
               TARGET: x86_64-pc-windows-msvc,
             }
           - {
               NAME: windows-arm64,
-              OS: windows-2022,
+              OS: windows-11-arm,
               TARGET: aarch64-pc-windows-msvc,
             }
           - {
               NAME: darwin-x64,
-              OS: macos-12,
+              OS: macos-13,
               TARGET: x86_64-apple-darwin,
             }
           - {
               NAME: darwin-arm64,
-              OS: macos-12,
+              OS: macos-15,
               TARGET: aarch64-apple-darwin,
             }
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Rust env
         uses: "./.github/actions/setup-rust-env"
@@ -65,19 +65,19 @@ jobs:
           cp "target/${{ matrix.build.TARGET }}/release/${binary_name}" "bin/${binary_name}-${{ matrix.build.NAME }}${extension}"
 
       - name: Upload binary
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: built-binaries
+          name: built-binaries-${{ matrix.build.TARGET }}
           path: bin/*
 
   release:
     name: Release
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build
     if: github.ref == 'refs/heads/master'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
@@ -101,14 +101,15 @@ jobs:
           fi
 
       - name: Download binaries
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         if: env.SHOULD_RELEASE == 'yes'
         with:
-          name: built-binaries
+          pattern: built-binaries-*
+          merge-multiple: true
           path: bin
 
       - name: Publish release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: env.SHOULD_RELEASE == 'yes'
         with:
           files: bin/*
