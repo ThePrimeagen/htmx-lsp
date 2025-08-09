@@ -5,7 +5,7 @@ mod tree_sitter;
 mod tree_sitter_querier;
 
 use anyhow::Result;
-use htmx::HxCompletion;
+use htmx::HxDocItem;
 use log::{debug, error, info, warn};
 use lsp_types::{
     ClientInfo, CompletionItem, CompletionItemKind, CompletionList, HoverContents,
@@ -20,7 +20,7 @@ use crate::{
     text_store::init_text_store,
 };
 
-fn to_completion_list(items: Vec<HxCompletion>) -> CompletionList {
+fn to_completion_list(items: Vec<HxDocItem>) -> CompletionList {
     CompletionList {
         is_incomplete: true,
         items: items

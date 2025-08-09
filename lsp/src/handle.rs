@@ -1,5 +1,5 @@
 use crate::{
-    htmx::{hx_completion, hx_hover, HxCompletion},
+    htmx::{hx_completion, hx_hover, HxDocItem},
     text_store::TEXT_STORE,
 };
 use log::{debug, error, warn};
@@ -40,7 +40,7 @@ struct TextDocumentOpen {
 
 #[derive(Debug)]
 pub struct HtmxAttributeCompletion {
-    pub items: Vec<HxCompletion>,
+    pub items: Vec<HxDocItem>,
     pub id: RequestId,
 }
 

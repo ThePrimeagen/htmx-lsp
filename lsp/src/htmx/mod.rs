@@ -5,21 +5,15 @@ use serde::{Deserialize, Serialize};
 use crate::{text_store::get_word_from_pos_params, tree_sitter::Position};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct HxCompletion {
+pub struct HxDocItem {
     pub name: &'static str,
     pub desc: &'static str,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct HxHover {
-    pub name: String,
-    pub desc: String,
 }
 
 macro_rules! build_completion {
     ($(($name:expr, $desc:expr)),*) => {
         &[
-            $(HxCompletion {
+            $(HxDocItem {
             name: $name,
             desc: include_str!($desc),
             }),*
@@ -27,7 +21,7 @@ macro_rules! build_completion {
     };
 }
 
-pub fn hx_completion(text_params: TextDocumentPositionParams) -> Option<&'static [HxCompletion]> {
+pub fn hx_completion(text_params: TextDocumentPositionParams) -> Option<&'static [HxDocItem]> {
     let result = crate::tree_sitter::get_position_from_lsp_completion(text_params.clone())?;
 
     debug!("result: {:?} params: {:?}", result, text_params);
@@ -38,7 +32,7 @@ pub fn hx_completion(text_params: TextDocumentPositionParams) -> Option<&'static
     }
 }
 
-pub fn hx_hover(text_params: TextDocumentPositionParams) -> Option<HxCompletion> {
+pub fn hx_hover(text_params: TextDocumentPositionParams) -> Option<HxDocItem> {
     let result = match get_word_from_pos_params(&text_params) {
         Ok(word) => Position::AttributeName(word),
         Err(_) => {
@@ -54,7 +48,7 @@ pub fn hx_hover(text_params: TextDocumentPositionParams) -> Option<HxCompletion>
     }
 }
 
-pub static HX_TAGS: &[HxCompletion] = build_completion!(
+pub static HX_TAGS: &[HxDocItem] = build_completion!(
     ("hx-boost", "./attributes/hx-boost.md"),
     ("hx-delete", "./attributes/hx-delete.md"),
     ("hx-get", "./attributes/hx-get.md"),
@@ -89,7 +83,7 @@ pub static HX_TAGS: &[HxCompletion] = build_completion!(
     ("hx-validate", "./attributes/hx-validate.md")
 );
 
-pub static HX_ATTRIBUTE_VALUES: phf::Map<&'static str, &[HxCompletion]> = phf::phf_map! {
+pub static HX_ATTRIBUTE_VALUES: phf::Map<&'static str, &[HxDocItem]> = phf::phf_map! {
     "hx-swap" =>
         build_completion![
         ("innerHTML", "./hx-swap/innerHTML.md"),
