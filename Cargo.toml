@@ -1,6 +1,6 @@
 [package]
 name = "htmx-lsp"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "A language server for htmx"
 license = "MIT"
