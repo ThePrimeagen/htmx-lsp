@@ -1,5 +1,5 @@
 use crate::{
-    htmx::{hx_completion, hx_hover, HxDocItem},
+    htmx::{hx_completion, hx_hover, HxCompletionValue},
     text_store::TEXT_STORE,
 };
 use log::{debug, error, warn};
@@ -40,7 +40,7 @@ struct TextDocumentOpen {
 
 #[derive(Debug)]
 pub struct HtmxAttributeCompletion {
-    pub items: Vec<HxDocItem>,
+    pub items: HxCompletionValue,
     pub id: RequestId,
 }
 
@@ -129,7 +129,7 @@ fn handle_completion(req: Request) -> Option<HtmxResult> {
             );
 
             Some(HtmxResult::AttributeCompletion(HtmxAttributeCompletion {
-                items: items.to_vec(),
+                items,
                 id: req.id,
             }))
         }
@@ -236,7 +236,7 @@ mod tests {
                 assert!(h.value.starts_with("hx-target"));
             }
             _ => {
-                panic!("unexpected result: {:?}", result);
+                panic!("unexpected result: {result:?}");
             }
         }
     }
@@ -271,7 +271,7 @@ mod tests {
                 assert!(h.value.starts_with("hx-target"));
             }
             _ => {
-                panic!("unexpected result: {:?}", result);
+                panic!("unexpected result: {result:?}");
             }
         }
     }
