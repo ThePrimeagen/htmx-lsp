@@ -8,9 +8,9 @@ use anyhow::Result;
 use htmx::HxDocItem;
 use log::{debug, error, info, warn};
 use lsp_types::{
-    ClientInfo, CompletionItem, CompletionItemKind, CompletionList, HoverContents,
-    InitializeParams, MarkupContent, ServerCapabilities, TextDocumentSyncCapability,
-    TextDocumentSyncKind, WorkDoneProgressOptions,
+    CompletionItem, CompletionItemKind, CompletionList, HoverContents, InitializeParams,
+    MarkupContent, ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind,
+    WorkDoneProgressOptions,
 };
 
 use lsp_server::{Connection, Message, Response};
@@ -50,13 +50,13 @@ fn to_completion_list(items: Vec<HxDocItem>) -> CompletionList {
 }
 
 fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
-    let params: InitializeParams = serde_json::from_value(params).unwrap();
+    let _params: InitializeParams = serde_json::from_value(params).unwrap();
 
     info!("STARTING EXAMPLE MAIN LOOP");
 
     for msg in &connection.receiver {
         error!("connection received message: {:?}", msg);
-        let id = match &msg {
+        let req_id = match &msg {
             Message::Request(ref req) => Some(req.id.clone()),
             _ => None,
         };
@@ -106,17 +106,21 @@ fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
                 }))
             }
             None => {
-                // Sending a response with `result == None` will crash the helix client
-                let id = match (id, &params.client_info) {
-                    (_, Some(ClientInfo { name, .. })) if name.eq("helix") => continue,
-                    (Some(id), _) => id,
-                    _ => continue,
-                };
-                connection.sender.send(Message::Response(Response {
-                    id,
-                    result: None,
-                    error: None,
-                }))
+                // If we receive a request, we *must* send a response. Otherwise, the Neovim
+                // client will not work with multiple servers
+                if let Some(id) = req_id {
+                    connection.sender.send(Message::Response(Response {
+                        id,
+                        result: None,
+                        error: Some(lsp_server::ResponseError {
+                            code: lsp_server::ErrorCode::RequestFailed as i32,
+                            message: "No information available".to_string(),
+                            data: None,
+                        }),
+                    }))
+                } else {
+                    Ok(())
+                }
             }
         } {
             Ok(_) => {}
