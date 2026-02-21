@@ -32,6 +32,10 @@ Another option is to use [lsp-debug-tools](https://github.com/ThePrimeagen/lsp-d
 
 No published extension yet, but there is a development extension in the [`clients/vscode`](client/vscode/README.md) folder (with setup instructions)
 
+### Zed
+
+You can install `htmx-lsp` via Zed's extension page which is provided by [zed-htmx-lsp](https://github.com/prophittcorey/zed-htmx-lsp).
+
 ## Development
 
 ### General
