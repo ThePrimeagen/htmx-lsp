@@ -13,9 +13,12 @@ When you add this extension on an element, any element below it in the DOM can u
 The AJAX response body will be parsed as JSON and passed into the template rendering.
 
 Install
+```html
 <script src="https://unpkg.com/htmx.org/dist/ext/client-side-templates.js"></script>
+```
 
 Usage
+```html
 <div hx-ext="client-side-templates">
     <button hx-get="/some_json"
           mustache-template="my-mustache-template">
@@ -30,6 +33,7 @@ Usage
      Handle with nunjucks
     </button>
 </div>
+```
 
 Full HTML Example
 
@@ -38,6 +42,7 @@ To use the client side template, you will need to include htmx, the extension, a
 If you wish to put a template into another file, you can use a directive such as <script src="my-template" id="template-id" type="text/mustache">
 
 <!DOCTYPE html>
+```html
 <html>
   <head>
     <meta charset="utf-8">
@@ -64,5 +69,6 @@ If you wish to put a template into another file, you can use a directive such as
     </div>
   </body>
 </html>
+```
 
 [HTMX Reference](https://htmx.org/extensions/client-side-templates/)

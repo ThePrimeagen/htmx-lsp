@@ -4,9 +4,11 @@ The value of this attribute is a CSS query selector of the element or elements t
 
 Here is an example with a button that will disable itself during a request:
 
+```html
 <button hx-post="/example" hx-disabled-elt="this">
     Post It!
 </button>
+```
 
 When a request is in flight, this will cause the button to be marked with the disabled attribute, which will prevent further clicks from occurring.
 

@@ -8,9 +8,12 @@ Both morphdom and nanomorph use the id property of a node to match up elements w
 However, in both these algorithms, the structure of the children of sibling nodes is not considered when morphing two nodes: only the ids of the nodes are considered. This is due to performance: it is not feasible to recurse through all the children of siblings when matching things up.
 
 Install
+```html
 <script src="https://unpkg.com/idiomorph/dist/idiomorph-ext.min.js"></script>
+```
 
 Usage
+```html
 <div hx-ext="morph">
 
     <button hx-get="/example" hx-swap="morph:innerHTML">
@@ -26,5 +29,6 @@ Usage
     </button>
 
 </div>
+```
 
 [Idiomorph Reference](https://github.com/bigskysoftware/idiomorph)

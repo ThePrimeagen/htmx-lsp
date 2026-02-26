@@ -3,11 +3,14 @@ The preload extension allows you to load HTML fragments into your browser’s ca
 IMPORTANT: Preloading content judiciously can improve your web application’s perceived performance, but preloading too many resources can negatively impact your visitors’ bandwidth and your server performance by initiating too many unused requests. Use this extension carefully!
 
 Install
+```html
 <script src="https://unpkg.com/htmx.org/dist/ext/preload.js"></script>
+```
 
 Usage
 Register the extension with htmx using the hx-ext attribute. Then, add a preload attribute to any hyperlinks and hx-get elements you want to preload. By default, resources will be loaded as soon as the mousedown event begins, giving your application a roughly 100-200ms head start on serving responses. See configuration below for other options.
 
+```html
 <body hx-ext="preload">
     <h1>What Works</h2>
     <a href="/server/1" preload>WILL BE requested using a standard XMLHttpRequest() and default options (below)</a>
@@ -17,11 +20,13 @@ Register the extension with htmx using the hx-ext attribute. Then, add a preload
     <a href="/server/3">WILL NOT be preloaded because it does not have an explicit "preload" attribute</a>
     <a hx-post="/server/4" preload>WILL NOT be preloaded because it is an HX-POST transaction.</a>
 </body>
+```
 
 Inheriting Preload Settings
 
 You can add the preload attribute to the top-level element that contains several <a href=""> or hx-get="" elements, and all of them will be preloaded. Be careful with this setting, because you can end up wasting bandwidth if you preload many more resources than you need.
 
+```html
 <body hx-ext="preload">
     <ul preload>
         <li><a href="/server/1">This will be preloaded because of the attribute in the node above.</a>
@@ -29,14 +34,17 @@ You can add the preload attribute to the top-level element that contains several
         <li><a href="/server/3">This will be preloaded, too.  Lorem ipsum.</a>
     </ul>
 </body>
+```
 
 Preloading of Linked Images
 
 After an HTML page (or page fragment) is preloaded, this extension can also preload linked image resources. It will not load or run linked Javascript or Cascading Stylesheet content, whether linked or embedded in the preloaded HTML. To preload images as well, use the following syntax.
 
+```html
 <div hx-ext="preload">
     <a href="/my-next-page" preload="mouseover" preload-images="true">Next Page</a>
 </div>
+```
 
 Configuration
 
@@ -46,7 +54,9 @@ preload=“mousedown” (DEFAULT)
 
 The default behavior for this extension is to begin loading a resource when the user presses the mouse down. This is a conservative setting that guarantees the user actually intends to use the linked resource. Because user click events typically take 100-200ms to complete, this setting gives your server a significant headstart compared with a regular click.
 
+```html
 <a href="/server/1" preload="mousedown">This will be preloaded when the user begins to cli
+```
 
 preload=“mouseover”
 
@@ -54,12 +64,15 @@ To preload links more aggressively, you can trigger the preload to happen when t
 
 Typical users hover over links for several hundred milliseconds before they click, which gives your server even more time to respond to the request than the mousedown option above. Test your own hover timing here.. However, be careful when using this option because it can increase server load by requesting resources unnecessarily.
 
+```html
 <a href="/server/1" preload="mouseover">This will be preloaded when the user's mouse remains
+```
 
 preload=“custom-event-name”
 
 Preload can also listen to any custom event within the system, triggering resources to be preloaded (if they have not already been cached by the browser). The extension itself generates an event called preload:init that can be used to trigger preloads as soon as an object has been processed by htmx.
 
+```html
 <body hx-ext="preload">
     <button hx-get="/server" preload="preload:init" hx-target="idLoadMore">Load More</a>
     <div id="idLoadMore">
@@ -67,6 +80,7 @@ Preload can also listen to any custom event within the system, triggering resour
         Clicking the button above will swap it into the DOM.
     </div>
 </body>
+```
 
 About Touch Events
 

@@ -12,12 +12,15 @@ The value of each attribute can be:
 * previous <CSS selector> which will scan the DOM backwards for the first element that matches the given CSS selector. (e.g previous .error will target the closest previous sibling with error class)
 
 Install
+```html
 <script src="https://unpkg.com/htmx.org/dist/ext/response-targets.js"></script>
+```
 
 Usage
 
 Here is an example that targets a div for normal (200) response but another div for 404 (not found) response, and yet another for all 5xx response codes:
 
+```html
 <div hx-ext="response-targets">
     <div id="response-div"></div>
     <button hx-post="/register"
@@ -29,6 +32,7 @@ Here is an example that targets a div for normal (200) response but another div 
     <div id="serious-errors"></div>
     <div id="not-found"></div>
 </div>
+```
 
 * The response from the /register URL will replace contents of the div with the id response-div when response code is 200 (OK).
 * The response from the /register URL will replace contents of the div with the id serious-errors when response code begins with a digit 5 (server errors).

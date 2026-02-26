@@ -3,6 +3,7 @@ The value of this attribute is comma separated list of elements to be swapped ou
 
 Here is an example that selects a subset of the response content:
 
+```html
 <div>
    <div id="alert"></div>
     <button hx-get="/info"
@@ -12,6 +13,7 @@ Here is an example that selects a subset of the response content:
         Get Info!
     </button>
 </div>
+```
 
 This button will issue a GET to /info and then select the element with the id info-details, which will replace the entire button in the DOM, and, in addition, pick out an element with the id alert in the response and swap it in for div in the DOM with the same ID.
 
@@ -19,6 +21,7 @@ Each value in the comma separated list of values can specify any valid hx-swap s
 
 For example, to prepend the alert content instead of replacing it:
 
+```html
 <div>
    <div id="alert"></div>
     <button hx-get="/info"
@@ -28,6 +31,7 @@ For example, to prepend the alert content instead of replacing it:
         Get Info!
     </button>
 </div>
+```
 
 Notes
 

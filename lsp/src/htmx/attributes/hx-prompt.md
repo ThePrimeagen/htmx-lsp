@@ -2,9 +2,11 @@ The hx-prompt attribute allows you to show a prompt before issuing a request. Th
 
 Here is an example:
 
+```html
 <button hx-delete="/account" hx-prompt="Enter your account name to confirm deletion">
   Delete My Account
 </button>
+```
 
 Notes
 
