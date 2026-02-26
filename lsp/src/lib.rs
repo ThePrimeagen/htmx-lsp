@@ -30,6 +30,10 @@ fn to_completion_list(items: HxCompletionValue) -> CompletionList {
                 .map(|x| CompletionItem {
                     label: x.name.to_string(),
                     kind: Some(CompletionItemKind::VALUE),
+                    documentation: Some(lsp_types::Documentation::MarkupContent(MarkupContent {
+                        kind: lsp_types::MarkupKind::Markdown,
+                        value: x.desc.to_string(),
+                    })),
                     detail: Some(x.desc.to_string()),
                     // TODO: Figure out if we can use edit_text instead of insert_text here
                     insert_text: Some(x.name.to_string() + "=\"$1\""),
@@ -51,6 +55,10 @@ fn to_completion_list(items: HxCompletionValue) -> CompletionList {
                 .map(|x| CompletionItem {
                     label: x.name.to_string(),
                     kind: Some(CompletionItemKind::PROPERTY),
+                    documentation: Some(lsp_types::Documentation::MarkupContent(MarkupContent {
+                        kind: lsp_types::MarkupKind::Markdown,
+                        value: x.desc.to_string(),
+                    })),
                     detail: Some(x.desc.to_string()),
                     ..Default::default()
                 })
