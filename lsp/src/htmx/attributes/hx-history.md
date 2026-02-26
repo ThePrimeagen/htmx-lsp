@@ -4,6 +4,7 @@ History navigation will work as expected, but on restoration the URL will be req
 
 Here is an example:
 
+```html
 <html>
   <body>
     <div hx-history="false">
@@ -11,6 +12,7 @@ Here is an example:
     </div>
   </body>
 </html>
+```
 
 Notes
 

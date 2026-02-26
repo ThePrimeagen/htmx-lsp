@@ -11,13 +11,17 @@ Use the following attributes to configure how SSE connections behave:
 * hx-trigger="sse:<message-name>" - SSE messages can also trigger HTTP callbacks using the hx-trigger attribute.
 
 Install
+```html
 <script src="https://unpkg.com/htmx.org/dist/ext/sse.js"></script>
+```
 
 Usage
+```html
 <div hx-ext="sse" sse-connect="/chatroom" sse-swap="message">
   Contents of this box will be updated in real time
   with every SSE message received from the chatroom.
 </div>
+```
 
 Connecting to an SSE Server
 
@@ -34,7 +38,9 @@ data: <div>Content to swap into your HTML page.</div>
 
 We’ll use the sse-swap attribute to listen for this event and swap its contents into our webpage.
 
+```html
 <div hx-ext="sse" sse-connect="/event-source" sse-swap="EventName"></div>
+```
 
 Notice that the name EventName from the server’s message must match the value in the sse-swap attribute. Your server can use as many different event names as necessary, but be careful: browsers can only listen for events that have been explicitly named. So, if your server sends an event named ChatroomUpdate but your browser is only listening for events named ChatUpdate then the extra event will be discarded.
 
@@ -44,7 +50,9 @@ SSE messages can also be sent without any event name. In this case, the browser 
 
 data: <div>Content to swap into your HTML page.</div>
 
+```html
 <div hx-ext="sse" sse-connect="/event-source" sse-swap="message"></div>
+```
 
 Receiving Multiple Events
 
@@ -52,13 +60,17 @@ You can also listen to multiple events (named or unnamed) from a single EventSou
 
 
 Multiple events in the same element
+```html
 <div hx-ext="sse" sse-connect="/server-url" sse-swap="event1,event2"></div>
+```
 
 Multiple events in different elements (from the same source).
+```html
 <div hx-ext="sse" sse-connect="/server-url">
     <div sse-swap="event1"></div>
     <div sse-swap="event2"></div>
 </div>
+```
 
 Trigger Server Callbacks
 
@@ -66,11 +78,13 @@ When a connection for server sent events has been established, child elements ca
 
 Here is an example:
 
+```html
 <div hx-ext="sse" sse-connect="/event_stream">
     <div hx-get="/chatroom" hx-trigger="sse:chatter">
         ...
     </div>
 </div>
+```
 
 This example establishes an SSE connection to the event_stream end point which then triggers a GET to the /chatroom url whenever the chatter event is seen.
 

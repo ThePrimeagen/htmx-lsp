@@ -6,15 +6,19 @@ The hx-request attribute allows you to configure various aspects of the request 
 
 These attributes are set using a JSON-like syntax:
 
+```html
 <div ... hx-request='\"timeout\":100'>
   ...
 </div>
+```
 
 You may make the values dynamically evaluated by adding the javascript: or js: prefix:
 
+```html
 <div ... hx-request='js: timeout:getTimeoutSetting() '>
   ...
 </div>
+```
 
 Notes
 

@@ -7,9 +7,12 @@ Within a run, a , character separates distinct class operations.
 A class operation is an operation name add, remove, or toggle, followed by a CSS class name, optionally followed by a colon : and a time delay.
 
 Install
+```html
 <script src="https://unpkg.com/htmx.org/dist/ext/class-tools.js"></script>
+```
 
 Usage
+```html
 <div hx-ext="class-tools">
     <div classes="add foo"/> <!-- adds the class "foo" after 100ms -->
     <div class="bar" classes="remove bar:1s"/> <!-- removes the class "bar" after 1s -->
@@ -19,6 +22,7 @@ Usage
                                                                  class "foo" after 1s  -->
     <div classes="toggle foo:1s"/> <!-- toggles the class "foo" every 1s -->
 </div>
+```
 
 
 [HTMX Reference](https://htmx.org/extensions/class-tools/)

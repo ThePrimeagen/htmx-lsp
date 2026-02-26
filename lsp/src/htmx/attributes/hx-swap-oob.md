@@ -2,12 +2,14 @@ The hx-swap-oob attribute allows you to specify that some content in a response 
 
 Consider the following response HTML:
 
+```html
 <div>
  ...
 </div>
 <div id="alerts" hx-swap-oob="true">
     Saved!
 </div>
+```
 
 The first div will be swapped into the target the usual manner. The second div, however, will be swapped in as a replacement for the element with the id alerts, and will not end up in the target.
 

@@ -7,9 +7,12 @@ Use the following attributes to configure how WebSockets behave:
 * ws-send - Sends a message to the nearest websocket based on the trigger value for the element (either the natural event or the event specified by [hx-trigger])
 
 Install
+```html
 <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>
+```
 
 Usage
+```html
 <div hx-ext="ws" ws-connect="/chatroom">
     <div id="notifications"></div>
     <div id="chat_room">
@@ -19,6 +22,7 @@ Usage
         <input name="chat_message">
     </form>
 </div>
+```
 
 Configuration
 
@@ -34,6 +38,7 @@ The example above establishes a WebSocket to the /chatroom end point. Content th
 As such, if you want to change the swapping method (e.g., append content at the end of an element or delegate swapping to an extension), you need to specify that in the message body, sent by the server.
 
 <!-- will be interpreted as hx-swap-oob="true" by default -->
+```html
 <form id="form">
     ...
 </form>
@@ -45,6 +50,7 @@ As such, if you want to change the swapping method (e.g., append content at the 
 <div id="chat_room" hx-swap-oob="morphdom">
     ....
 </div>
+```
 
 Sending Messages to a WebSocket
 

@@ -1,9 +1,12 @@
 Alpine.js now has a lightweight morph plugin and this extension allows you to use it as the swapping mechanism in htmx which is necessary to retain Alpine state when you have entire Alpine components swapped by htmx.
 
 Install
+```html
 <script src="https://unpkg.com/htmx.org/dist/ext/alpine-morph.js"></script>
+```
 
 Usage
+```html
 <header>
   <script src="https://unpkg.com/htmx.org@latest"></script>
   <script src="https://unpkg.com/htmx.org@latest/dist/ext/alpine-morph.js"></script>
@@ -27,6 +30,7 @@ Usage
         </div>
     </div>
 </body>
+```
 
 In the above example, all the Alpine x-data states (count, replaced, and message) are preserved even the entire Alpine component is swapped.
 

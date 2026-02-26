@@ -5,7 +5,9 @@ Multi-swap can help in cases where OOB (Out of Band Swaps) is not enough for you
 It is a very powerful tool in conjunction with hx-boost and preload extension.
 
 Install
+```html
 <script src="https://unpkg.com/htmx.org/dist/ext/multi-swap.js"></script>
+```
 
 Usage
 
@@ -15,6 +17,7 @@ If you’re not using e.g. hx-get to enable HTMX behavior, set hx-boost="true" o
 
 Selectors must be separated by a comma (without surrounding spaces) and a colon with the desired swap method can optionally be placed after the selector. Default swap method is innerHTML.
 
+```html
 <body hx-boost="true" hx-ext="multi-swap">
    <!-- simple example how to swap #id1 and #id2 from /example by innerHTML (default swap method) -->
    <button hx-get="/example" hx-swap="multi:#id1,#id2">Click to swap #id1 and #id2 content</button>
@@ -27,11 +30,13 @@ Selectors must be separated by a comma (without surrounding spaces) and a colon 
    <div id="id3">Old 3 content</div>
    <div id="id4">Old 4 content</div>
 </body>
+```
 
 Real world example with preloading
 
 The use case below shows how to ensure that only the #submenu and #content elements are redrawn when the main menu items are clicked. Thanks to the combination with the preload extension, the page, including its images, is preloaded on mouseover event.
 
+```html
 <head>
   <script src="/path/to/htmx.js"></script>
   <script src="/path/to/ext/multi-swap.js"></script>
@@ -49,6 +54,7 @@ The use case below shows how to ensure that only the #submenu and #content eleme
   <main id="content">...</div>
   <footer>...</footer>
 </body>
+```
 
 Notes and limitations
 

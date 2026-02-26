@@ -2,13 +2,14 @@ The hx-confirm attribute allows you to confirm an action before issuing a reques
 
 Here is an example:
 
+```html
 <button hx-delete="/account" hx-confirm="Are you sure you wish to delete your account?">
   Delete My Account
 </button>
+```
 
 Notes
 
     hx-confirm is inherited and can be placed on a parent element
 
 [HTMX Reference](https://htmx.org/attributes/hx-confirm/)
-
