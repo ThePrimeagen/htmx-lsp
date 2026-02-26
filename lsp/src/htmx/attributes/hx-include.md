@@ -4,12 +4,13 @@ Here is an example that includes a separate input value:
 
 ```html
 <div>
-    <button hx-post="/register" hx-include="[name='email']">
-        Register!
-    </button>
-    Enter email: <input name="email" type="email"/>
+  <button hx-post="/register" hx-include="[name='email']">
+    Register!
+  </button>
+  Enter email: <input name="email" type="email"/>
 </div>
 ```
+
 This is a little contrived as you would typically enclose both of these elements in a form and submit the value automatically, but it demonstrates the concept.
 
 Note that if you include a non-input element, all input elements enclosed in that element will be included.

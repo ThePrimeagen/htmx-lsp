@@ -6,12 +6,12 @@ Here is an example that selects a subset of the response content:
 ```html
 <div>
    <div id="alert"></div>
-    <button hx-get="/info"
-            hx-select="#info-details"
-            hx-swap="outerHTML"
-            hx-select-oob="#alert">
-        Get Info!
-    </button>
+   <button hx-get="/info"
+           hx-select="#info-details"
+           hx-swap="outerHTML"
+           hx-select-oob="#alert">
+       Get Info!
+   </button>
 </div>
 ```
 
@@ -24,12 +24,12 @@ For example, to prepend the alert content instead of replacing it:
 ```html
 <div>
    <div id="alert"></div>
-    <button hx-get="/info"
-            hx-select="#info-details"
-            hx-swap="outerHTML"
-            hx-select-oob="#alert:afterbegin">
-        Get Info!
-    </button>
+   <button hx-get="/info"
+           hx-select="#info-details"
+           hx-swap="outerHTML"
+           hx-select-oob="#alert:afterbegin">
+       Get Info!
+   </button>
 </div>
 ```
 

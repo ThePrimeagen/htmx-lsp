@@ -4,9 +4,9 @@ Here is an example that selects a subset of the response content:
 
 ```html
 <div>
-    <button hx-get="/info" hx-select="#info-details" hx-swap="outerHTML">
-        Get Info!
-    </button>
+  <button hx-get="/info" hx-select="#info-details" hx-swap="outerHTML">
+      Get Info!
+  </button>
 </div>
 ```
 

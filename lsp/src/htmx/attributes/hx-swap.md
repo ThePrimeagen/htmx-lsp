@@ -15,7 +15,7 @@ These options are based on standard DOM naming and the Element.insertAdjacentHTM
 So in this code:
 
 ```html
-  <div hx-get="/example" hx-swap="afterend">Get Some HTML & Append It</div>
+<div hx-get="/example" hx-swap="afterend">Get Some HTML & Append It</div>
 ```
 The div will issue a request to /example and append the returned content after the div
 
@@ -28,36 +28,38 @@ If you want to use the new View Transitions API when a swap occurs, you can use 
 Timing: swap & settle
 You can modify the amount of time that htmx will wait after receiving a response to swap the content by including a swap modifier:
 
-  <!-- this will wait 1s before doing the swap after it is received -->
 ```html
-  <div hx-get="/example" hx-swap="innerHTML swap:1s">Get Some HTML & Append It</div>
+<!-- this will wait 1s before doing the swap after it is received -->
+<div hx-get="/example" hx-swap="innerHTML swap:1s">Get Some HTML & Append It</div>
 ```
 Similarly, you can modify the time between the swap and the settle logic by including a settle modifier:
 
-  <!-- this will wait 1s before doing the swap after it is received -->
 ```html
-  <div hx-get="/example" hx-swap="innerHTML settle:1s">Get Some HTML & Append It</div>
+<!-- this will wait 1s before doing the swap after it is received -->
+<div hx-get="/example" hx-swap="innerHTML settle:1s">Get Some HTML & Append It</div>
 ```
 These attributes can be used to synchronize htmx with the timing of CSS transition effects.
 
 Scrolling: scroll & show
 You can also change the scrolling behavior of the target element by using the scroll and show modifiers, both of which take the values top and bottom:
 
-  <!-- this fixed-height div will scroll to the bottom of the div after content is appended -->
 ```html
-  <div style="height:200px; overflow: scroll"
-       hx-get="/example"
-       hx-swap="beforeend scroll:bottom">
-     Get Some HTML & Append It & Scroll To Bottom
-  </div>
-  <!-- this will get some content and add it to #another-div, then ensure that the top of #another-div is visible in the
-       viewport -->
-  <div hx-get="/example"
-       hx-swap="innerHTML show:top"
-       hx-target="#another-div">
-    Get Some Content
-  </div>
+<!-- this fixed-height div will scroll to the bottom of the div after content is appended -->
+<div style="height:200px; overflow: scroll"
+     hx-get="/example"
+     hx-swap="beforeend scroll:bottom">
+   Get Some HTML & Append It & Scroll To Bottom
+</div>
+
+<!-- this will get some content and add it to #another-div, then ensure that the top of #another-div is visible in the
+     viewport -->
+<div hx-get="/example"
+     hx-swap="innerHTML show:top"
+     hx-target="#another-div">
+  Get Some Content
+</div>
 ```
+
 If you wish to target a different element for scrolling or showing, you may place a CSS selector after the scroll: or show:, followed by :top or :bottom:
 
   <!-- this will get some content and swap it into the current div, then ensure that the top of #another-div is visible in the
