@@ -8,9 +8,9 @@ use anyhow::Result;
 use htmx::HxCompletionValue;
 use log::{debug, error, info, warn};
 use lsp_types::{
-    Command, CompletionItem, CompletionItemKind, CompletionList, HoverContents, InitializeParams,
-    InsertTextFormat, MarkupContent, ServerCapabilities, TextDocumentSyncCapability,
-    TextDocumentSyncKind, WorkDoneProgressOptions,
+    Command, CompletionItem, CompletionItemKind, CompletionList, Contents, InitializeParams,
+    InsertTextFormat, MarkupContent, ServerCapabilities, TextDocumentSyncKind,
+    WorkDoneProgressOptions,
 };
 
 use lsp_server::{Connection, Message, Response};
@@ -29,19 +29,22 @@ fn to_completion_list(items: HxCompletionValue) -> CompletionList {
                 .iter()
                 .map(|x| CompletionItem {
                     label: x.name.to_string(),
-                    kind: Some(CompletionItemKind::VALUE),
+                    kind: Some(CompletionItemKind::Value),
                     detail: Some(x.desc.to_string()),
                     // TODO: Figure out if we can use edit_text instead of insert_text here
                     insert_text: Some(x.name.to_string() + "=\"$1\""),
-                    insert_text_format: Some(InsertTextFormat::SNIPPET),
+                    insert_text_format: Some(InsertTextFormat::Snippet),
                     command: Some(Command {
                         title: String::from("Suggest"),
                         command: "editor.action.triggerSuggest".to_string(),
                         arguments: None,
+                        tooltip: None,
                     }),
                     ..Default::default()
                 })
                 .collect(),
+            apply_kind: None,
+            item_defaults: None,
         },
         HxCompletionValue::AttributeValue(items) => CompletionList {
             is_incomplete: true,
@@ -50,11 +53,13 @@ fn to_completion_list(items: HxCompletionValue) -> CompletionList {
                 .iter()
                 .map(|x| CompletionItem {
                     label: x.name.to_string(),
-                    kind: Some(CompletionItemKind::PROPERTY),
+                    kind: Some(CompletionItemKind::Property),
                     detail: Some(x.desc.to_string()),
                     ..Default::default()
                 })
                 .collect(),
+            apply_kind: None,
+            item_defaults: None,
         },
     }
 }
@@ -94,7 +99,7 @@ fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
             Some(HtmxResult::AttributeHover(hover_resp)) => {
                 debug!("main_loop - hover response: {:?}", hover_resp);
                 let hover_response = lsp_types::Hover {
-                    contents: HoverContents::Markup(MarkupContent {
+                    contents: Contents::MarkupContent(MarkupContent {
                         kind: lsp_types::MarkupKind::Markdown,
                         value: hover_resp.value.to_string(),
                     }),
@@ -153,7 +158,7 @@ pub fn start_lsp() -> Result<()> {
 
     // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
     let server_capabilities = serde_json::to_value(ServerCapabilities {
-        text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
+        text_document_sync: Some(TextDocumentSyncKind::Full.into()),
         completion_provider: Some(lsp_types::CompletionOptions {
             resolve_provider: Some(false),
             trigger_characters: Some(vec!["-".to_string(), "\"".to_string(), " ".to_string()]),
@@ -164,7 +169,7 @@ pub fn start_lsp() -> Result<()> {
             completion_item: None,
         }),
 
-        hover_provider: Some(lsp_types::HoverProviderCapability::Simple(true)),
+        hover_provider: Some(true.into()),
 
         ..Default::default()
     })

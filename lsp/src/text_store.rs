@@ -4,7 +4,7 @@ use std::{
     sync::{Arc, Mutex, OnceLock},
 };
 
-use lsp_types::{TextDocumentPositionParams, Url};
+use lsp_types::{TextDocumentPositionParams, Uri};
 
 type TxtStore = HashMap<String, String>;
 
@@ -29,7 +29,7 @@ pub fn init_text_store() {
     _ = TEXT_STORE.set(Arc::new(Mutex::new(TextStore(HashMap::new()))));
 }
 
-pub fn get_text_document(uri: &Url) -> Option<String> {
+pub fn get_text_document(uri: &Uri) -> Option<String> {
     return TEXT_STORE
         .get()
         .expect("text store not initialized")
