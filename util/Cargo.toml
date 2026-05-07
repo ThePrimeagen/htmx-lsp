@@ -10,4 +10,4 @@ license = "MIT"
 [dependencies]
 log.workspace = true
 structured-logger.workspace = true
-lsp-types = "0.94.0"
+lsp-types.workspace = true

@@ -108,14 +108,14 @@ fn handle_completion(req: Request) -> Option<HtmxResult> {
 
     match completion.context {
         Some(CompletionContext {
-            trigger_kind: CompletionTriggerKind::TRIGGER_CHARACTER,
+            trigger_kind: CompletionTriggerKind::TriggerCharacter,
             ..
         })
         | Some(CompletionContext {
-            trigger_kind: CompletionTriggerKind::INVOKED,
+            trigger_kind: CompletionTriggerKind::Invoked,
             ..
         }) => {
-            let items = match hx_completion(completion.text_document_position) {
+            let items = match hx_completion(completion.text_document_position_params) {
                 Some(items) => items,
                 None => {
                     error!("EMPTY RESULTS OF COMPLETION");
