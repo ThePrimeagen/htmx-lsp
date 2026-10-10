@@ -6,7 +6,7 @@ mod tree_sitter_querier;
 
 use anyhow::Result;
 use htmx::HxCompletionValue;
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 use lsp_types::{
     Command, CompletionItem, CompletionItemKind, CompletionList, HoverContents, InitializeParams,
     InsertTextFormat, MarkupContent, ServerCapabilities, TextDocumentSyncCapability,
@@ -72,7 +72,12 @@ fn main_loop(connection: Connection, params: serde_json::Value) -> Result<()> {
         };
         let result = match msg {
             Message::Notification(not) => handle_notification(not),
-            Message::Request(req) => handle_request(req),
+            Message::Request(req) => {
+                if connection.handle_shutdown(&req)? {
+                    return Ok(());
+                }
+                handle_request(req)
+            }
             _ => handle_other(msg),
         };
 
@@ -174,29 +179,47 @@ pub fn start_lsp() -> Result<()> {
     main_loop(connection, initialization_params)?;
     io_threads.join()?;
 
-    // Shut down gracefully.
-    warn!("shutting down server");
     Ok(())
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
+    use std::{thread, time::Duration};
+
     use anyhow::Result;
+    use lsp_server::{Connection, Message, Notification, Request, RequestId};
+    use serde_json::Value;
+
+    use super::main_loop;
 
     #[test]
-    fn test_byte_col() -> Result<()> {
-        /*
-        let source = "oeunth";
+    fn shutdown_request_exits_gracefully() -> Result<()> {
+        let (server, client) = Connection::memory();
+        let server_thread =
+            thread::spawn(move || main_loop(server, serde_json::json!({ "capabilities": {} })));
+        let request_id = RequestId::from(1);
 
-        let (line, col) = byte_pos_to_line_col(source.as_str(), msg.position.0);
-        assert_eq!(line, 9);
-        assert_eq!(col, 9);
+        client.sender.send(Message::Request(Request {
+            id: request_id.clone(),
+            method: "shutdown".to_string(),
+            params: Value::Null,
+        }))?;
 
-        let (line, col) = byte_pos_to_line_col(source.as_str(), msg.position.1);
-        assert_eq!(line, 9);
-        assert_eq!(col, 21);
+        let response = match client.receiver.recv_timeout(Duration::from_secs(1))? {
+            Message::Response(response) => response,
+            message => panic!("expected shutdown response, got {message:?}"),
+        };
+        assert_eq!(response.id, request_id);
+        assert_eq!(response.result, Some(Value::Null));
+        assert!(response.error.is_none());
 
-        */
+        client.sender.send(Message::Notification(Notification {
+            method: "exit".to_string(),
+            params: Value::Null,
+        }))?;
+        drop(client);
+
+        server_thread.join().expect("server thread panicked")?;
         Ok(())
     }
 }
